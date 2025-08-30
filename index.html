@@ -1,0 +1,1646 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Constitution - Amnaḍ n Infusen</title>
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, increment, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Constitution data and translations
+        const constitutionData = {
+            sidebar_title: { tam: "TIRA n Infusen", ara: "دستور إنفوسن" },
+            nav_preamble: { tam: "Tazwarayt", ara: "الديباجة" },
+            nav_articles: { tam: "Imagraden n Tira-nneɣ", ara: "مواد الدستور" },
+            nav_infographic: { tam: "Infugrafik n Yixfawen", ara: "إنفوجرافيك الأبواب" },
+            nav_government: { tam: "Tinbaḍin en Wemnaḍ", ara: "سلطات الإقليم" },
+            nav_resources: { tam: "Tibaɣurin ed Tɣellist", ara: "الثروات والأمن" },
+            nav_overall_vote: { tam: "Asqisi Amatay", ara: "التصويت العام" },
+
+            preamble_title: { tam: "Tazwarayt", ara: "الديباجة" },
+            preamble_text: {
+                tam: "S usenti seg umenzay en yinezgi en mdu iɣerfan di ugelluy en tugart nsen ed yimenzayen en yinezgan ed tlelliwin en wemdan tiẓuliganin d tigrawanin ed tuxsa en Weɣref g Wemnaḍ a ,es wuẓul acettalan ines ed tegrawin ines timettiyanin:,\"Imaziɣen, Afṛu, Iserɣinen (Aɛraben) ed yimguǧa, i usebded en yiǧǧen unagraw en wenbaḍ umasan ilan tasekta tasertant tadimuqṛatit taɣeṛmant tamennawant tilellit g Wemnaḍ en Infusen. D es tuska ɣef yilugan ed tnaḍin en usaḍuf agramuran ed yimenzayen en yinezgan ed wemdan, d i yiswi en usili en teɣdemt tamuṭṭyant ed uzulez en wemsadar alwiyan a jar t\\inamuren\\in en Wemnaḍ; d i yiswi en usemsu en mdu tisertiyin timezzaẓaranin ay yettwallilen sɣer yinabaḍen yizwaren d imuṭṭyanen yemseḍfaren mgal t\\inamuren\\in en Wemnaḍ am wesfata nsen seg yinezgan iɣeṛmanen d isertanen d idamsanen d idelsanen d imettiyanen, d es usenti seg yimenzayen en tdimuqṛatit am d-adasil en wesɣessa en Unabaḍ d i yiswi en wawwaḍ ɣer yiǧǧen wenbaḍ adimuqṛati amakʷraz yettbeddan ɣef udasil en wezrekki en yinezgan ed tlelliwin en wemdan, d ɣef udasil en usaḍuf ed wamun aɣeṛman ed ummedraw di tenbaḍt ed ummeglay nnes amelwi amennawan d yettwamsalen ɣef webrid en yisudayen iɣeṛmanen imeggayen d timessusaɣin d tinaɣlafin; nessikez TIRA nneɣ-a. ",
+                ara: "انطلاقاً من مبدأ حق جميع الشعوب في تقرير مصيرها ومبادئ حقوق وحريات الإنسان الفردية والجماعية وإرادة الشعوب في هذا الإقليم بإمتداه الاثني والمجموعات الاجتماعية ; إمازيغن ،أفرو، عرب والرحل، لإقامة نظام حكم ذاتي ذو بعد سياسي ديمقراطي مدني تعددي حر في إقليم إنفوسن. وبناء على قواعد وأحكام القانون الدولي ومبادئ حقوق الإنسان ومن أجل تحقيق العدالة الانتقالية وترسيخ التعايش السلمي بين مواطني الإقليم. ومن أجل إلغاء جميع السياسات العنصرية التي مورست من قبل الحكومات السابقة والانتقالية المتعاقبة ضد مواطني الإقليم من حرمانهم الحقوق المدنية والسياسية والاقتصادية والثقافية والإجتماعية. و انطلاقاً من مبادئ الديمقراطية كأساس لهيكلة الحكومة وبغية الوصول إلى حكم ديمقراطي رشيد يقوم على أساس احترام الحقوق والحريات الانسان وعلى أساس القانون والمجتمع المدني والتشارك في السلطة وتداولها السلمي التعددي وممارس من خلال مؤسسات مدنية فعالة وشفافة ومسؤوله ؛ تبنينا هذا الدستور :"
+            },
+
+            articles_main_title: { tam: "Imagraden n Tira-nneɣ", ara: "مواد الدستور" },
+            articles_main_subtitle: { tam: "Sileɣ akk imagraden n Tira-nneɣ s tullal d usemmuggez n yisqasiyen.", ara: "استعرض جميع مواد الدستور مع إمكانية التصويت لكل مادة." },
+
+            infographic_title: { tam: "Infugrafik n Yixfawen", ara: "إنفوجرافيك الأبواب" },
+            infographic_subtitle: { tam: "Awzen ixfawen ed yimagraden n Tira-nneɣ.", ara: "نظرة عامة على أبواب ومواد الدستور." },
+            total_chapters_label: { tam: "Ixfawen", ara: "عدد الأبواب" },
+            total_articles_label: { tam: "Imagraden", ara: "عدد المواد" },
+            
+            unique_voters_counter: { tam: "Uṭṭunen n t-Inefranen-in:", ara: "عدد المصوتين :" },
+
+            gov_title: { tam: "Tinbaḍin en Wemnaḍ", ara: "سلطات الإقليم" },
+            gov_subtitle: { tam: "Anagraw en tenbaḍt yettbedd ɣef ubeṭṭu a jar tenbaḍin.", ara: "يقوم نظام الحكم على مبدأ الفصل بين السلطات." },
+            gov_chart_title: { tam: "Abeṭṭu en Tenbaḍin", ara: "الفصل بين السلطات" },
+            gov_branch_1_title: { tam: "Tanbaḍt Izerfan (Abeṛlaman)", ara: "السلطة التشريعية (البرلمان)" },
+            gov_branch_1_text: { tam: "Tettwamsal sɣer yiǧǧen ubeṛlaman qqaṛen as Abeṛlaman en Wemnaḍ en Infusen.", ara: "تمارس من قبل برلمان يسمى برلمان إقليم إنفوسن." },
+            gov_branch_2_title: { tam: "Tanbaḍt Taselkamt (Tselwit d Useqqim)", ara: "السلطة التنفيذية (الرئاسة والمجلس)" },
+            gov_branch_2_text: { tam: "Tettmun es Tselwit en Wemnaḍ ed Useqqim Ineɣlafen.", ara: "تتكون من رئاسة الإقليم ومجلس الوزراء." },
+            gov_branch_3_title: { tam: "Tanbaḍt Tazurfant (Aseqqim Uzuref)", ara: "السلطة القضائية (مجلس القضاء)" },
+            gov_branch_3_text: { tam: "Tettmun es Useqqim Uzuref, ed Tsenbaḍt Tamenḍawant, ed tsenbaḍin niḍen.", ara: "تتكون من مجلس القضاء، والمحكمة الدستورية، والمحاكم الأخرى." },
+
+            res_title: { tam: "Tibaɣurin ed Tɣellist", ara: "الثروات والأمن" },
+            res_subtitle: { tam: "Tedbelt en tbaɣurin tigamanin ed uḍakal en tɣellist en Wemnaḍ.", ara: "إدارة الموارد الطبيعية وضمان أمن الإقليم." },
+            res_1_title: { tam: "Tabaɣurt en Ufetṛul ed Ugaz (Amagrad 47)", ara: "ثروة النفط والغاز (المادة 47)" },
+            res_1_text: { tam: "Tabaɣurt en ufetṛul ed ugaz tella d-agla en Wagdud akk en Wemnaḍ.", ara: "ثروة النفط والغاز هي ملك كل شعب إقليم إنفوسن." },
+            res_2_title: { tam: "Taɣellist en Wemnaḍ (Amagrad 51)", ara: "أمن الإقليم (المادة 51)" },
+            res_2_text: { tam: "Ad yettwasileɣ yiǧǧen useqqamu umi qqaṛen Aseqqamu en Tɣellist en Wemnaḍ.", ara: "يشكل مجلس يسمى مجلس أمن إقليم إنفوسن." },
+
+            overall_vote_title: { tam: "Asqisi Amatay ɣef Tira-nneɣ", ara: "التصويت العام على الدستور" },
+            overall_vote_subtitle: { tam: "Fk aɣris-inek ɣef Tira-nneɣ s umata.", ara: "قدم رأيك العام حول الدستور." },
+            overall_vote_question: { tam: "Tesnamreḍ neɣ wer tesnamreḍ ɣef Tira-nneɣ-a?", ara: "هل توافق أو ترفض هذا الدستور؟" },
+            vote_yes_label: { tam: "Ih", ara: "نعم" },
+            vote_no_label: { tam: "Ala", ara: "لا" },
+            vote_null_label: { tam: "Wer", ara: "محايد" },
+            vote_yes_count_label: { tam: "Ih:", ara: "نعم:" },
+            vote_no_count_label: { tam: "Ala:", ara: "لا:" },
+            vote_null_count_label: { tam: "Wer:", ara: "محايد:" },
+
+            // Demographic questions
+            demographics_title: { tam: "Isqasiyen n Wemdan", ara: "أسئلة ديموغرافية" },
+            demographics_subtitle: { tam: "Sili isqasiyen-a i usekles n yisqasiyen-inek.", ara: "الرجاء الإجابة على الأسئلة التالية لتسجيل تصويتك." },
+            age_question: { tam: "Awzen nneg 18 iseggasen?", ara: "هل عمرك فوق 18 سنة؟" },
+            age_yes: { tam: "Ih", ara: "نعم" },
+            age_no: { tam: "Ala", ara: "لا" },
+            gender_question: { tam: "Awtem neɣ Tawtemt?", ara: "الجنس؟" },
+            gender_male: { tam: "Awtem", ara: "ذكر" },
+            gender_female: { tam : "Tawtemt", ara: "أنثى" },
+            city_question: { tam: "Sileɣ tamurt-inek:", ara: "اختر مدينتك:" },
+            city_yefren: { tam: "Yefren", ara: "يفرن" },
+            city_qal3et: { tam: "Qalɛet", ara: "القلعة" },
+            city_jadu: { tam: "Jadu", ara: "جادو" },
+            city_amsin: { tam: "Amsin", ara: "أمسيْن" },
+            city_fersetta: { tam: "Ferseṭṭa", ara: "فرسطاء" },
+            city_tindemirt: { tam: "Tindemirt", ara: "تندميرة" },
+            city_tamlucayt: { tam: "Tamlucayt", ara: "تملوشاية" },
+            city_tintemzin: { tam: "Tinṭemẓin", ara: "تنطميزين" },
+            city_kabaw: { tam: "Kabaw", ara: "كاباو" },
+            city_lalut: { tam: "Lalut", ara: "لالوت" },
+            city_ghadames: { tam: "Γadimes", ara: "غدامس" },
+            submit_demographics: { tam: "Sekles", ara: "إرسال" },
+            demographics_error_incomplete: {
+                tam: "dis mammek irray f tisesstunin qbel seld, tanemmirt",
+                ara: "لو سمحت إمكانية الاجابة على الاسئلة، شكرا"
+            },
+
+            articles_data: {
+                "Tawurt tamezwarut": {
+                    title_tam: "Tawurt tamezwarut - Imenzayen Idasilanen ed tnaḍin timatayin",
+                    title_ara: "الباب الأول - المبادئ الأساسية والأحكام العامة",
+                    articles: {
+                        "article_1": {
+                            title_tam: "Amagrad iǧǧen (1)",
+                            title_ara: "المادة 1",
+                            text_tam: "1 – Amnaḍ en Infusen d-amnaḍ yellan jaj en uɣanas akalan uftis d adrar d amdaw, ilan anbaḍ umasan d ammuɣṛan. 2 – Anagraw asertan g Wemnaḍ d-anagraw Azgen-selwayan adimuqṛati amennawan yettennalen ɣef umenzay en ubeṭṭu a jar tenbaḍin ed ummeglay amelwi d amennawan en tenbaḍt.",
+                            text_ara: "إقليم إنفوسن هو إقليم ضمن نطاق الجغرافي الساحلي (زوارا) والجبلي (نفوسا) والواحاتي(غدامس)، ذات حكم ذاتي و سيادي. النظام السياسي في إقليم شبه-رئاسي ديمقراطي تعددي يعتمد على مبدأ فصل السلطات والتداول السلمي والتعددي للسلطة.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_2": {
+                            title_tam: "Amagrad sen (2)",
+                            title_ara: "المادة 2",
+                            text_tam: "1 - Timmuɣṛa tella en usaḍuf, d aɣref d-netta yellan d-asagem en tenbaḍin d d-adasil en tzerfa nsent d yessawal ɣef tuxsa nnes ɣef webrid en tefranin timessusaɣin d tusridin. 2 – Yettmun Wemnaḍ en Infusen es yiɣerma ed tesgiwin ed yiɣasra ed tallunin ay d-as iḍeffaren, d yettwaẓar am d-iǧet tyunt tasertant,d ad ttwagelyen yibuda nnes ed yibeṭṭuten nnes ideblanen sɣer Ubeṛlaman en Wemnaḍ.",
+                            text_ara: "1 - السيادة للقانون، والشعب هو مصدر السلطات وأساس شرعيتها ويعبر عن إرادته عن طريق انتخاب شفاف ومباشرة. 2 – يتكون إقليم إنفوسن من المدن والمناطق والقرى والمساحات التابعة له ويعتبر وحدة سياسية واحدة ويتم تحديد حدود وتقسيماته الإدارية من قبل برلمان الإقليم.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_3": {
+                            title_tam: "Amagrad caṛeḍ (3)",
+                            title_ara: "المادة 3",
+                            text_tam: "TIRA nneɣ-a tettseggar tugdat yemdan a jar mdu t\\inamuren\\in en Wemnaḍ es yinettiyen nsen inemmezrayen.",
+                            text_ara: "يضمن هذا الدستور المساواة التامة بين جميع مواطني الاقليم بمختلف انتماءاتهم.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_4": {
+                            title_tam: "Amagrad ukkuẓ (4)",
+                            title_ara: "المادة 4",
+                            text_tam: "1 - Ad yettwasebded yiǧǧen ucenyal ed tẓugayt ed tmatart tanagmaḍt en Wemnaḍ. 2 - Yella ɣer Wemnaḍ en Infusen yizli amuran nnes, d amud nnes yella d-Yennayer.",
+                            text_ara: "1 - يتم اعتماد علم وشعار ورمز خاص بالإقليم. 2 - للإقليم إنفوسن نشيده الوطني وعيده (Yennayer).",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_5": {
+                            title_tam: "Amagrad fus (5)",
+                            title_ara: "المادة 5",
+                            text_tam: "1 - Tamaziɣt d-nettat yellan d-tutlayt tasirant g Wemnaḍ en Infusen, d ad tsegger TIRA nneɣ a inezgi en t\\inamuren\\in en Wemnaḍ en Infusen g uselmed en tarwa nsen es tutlayt nsen tayemmat, ayenma tella, di tsuda tinabaḍanin en uselmed es wassis d id yimesseɣyaden isegmiyanen. 2 - Taserɣint (Taɛrabt) ed Tinglizt d-tutlayin tisiranin es udeblan en Unabaḍ en Wemnaḍ.",
+                            text_ara: "1 - الامازيغية(تامازيغت) اللغة الرسمية في إقليم إنفوسن، ويضمن هذا الدستور حق مواطني إقليم إنفوسن في تعليم أبنائهم بلغتهم الام، أيا كانت، في المؤسسات التعليمية الحكومية وفق الضوابط التربوية. 2 - اللغة العربية والانجليزية لغتان رسميتان إدارياً للحكومة الإقليم.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_6": {
+                            title_tam: "Amagrad sḍis (6)",
+                            title_ara: "المادة 6",
+                            text_tam: "1 - Yessefk i Unabaḍ en Wemnaḍ ad yageẓ tutlayt Tamaziɣt di mdu imerdulen ed yiceṛṛaben d ad yemmuzel i usurres en ummeglay nnes ed useqdec nnes ed wenyuddu nnes ed uselmed nnes. 2 – Yessefk i Unabaḍ en Wemnaḍ ed tmersal uselmed ad ssikzen iseqqulen imsasayen d imcickan i yiswi en usurres en useqdec en tutlayt Tamaziɣt di mdu irmuden ilemmudanen d urd ilemmudanen d altu asugger ussnan d akadimyan.",
+                            text_ara: "1 - يتوجب على حكومة الإقليم حماية اللغة الامازيغية(تامازيغت) في جميع المجالات والقطاعات والعمل على تشجيع تداولها واستخدامها وانتشارها وتعليمها. 2 – على حكومة الإقليم والمؤسسات التعليمية تبني المعايير المناسبة والملائمة من اجل تشجيع استخدام اللغة الامازيغية(تامازيغت) في جميع النشاطات التعليمية وغير التعليمية وكذلك البحث العلمي والأكاديمي.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_7": {
+                            title_tam: "Amagrad sa (7)",
+                            title_ara: "المادة 7",
+                            text_tam: "1 - Tezrekka TIRA nneɣ en Wemnaḍ mdu ijjiden d ad teḍkel tilelli en tililt en mdu isumuden ed tdemmawin. 2 - Yella yinezgi ɣer yibaliḍen g Wemnaḍ en wedriz es yimadden nsen, d ad yettwaddes uyenni es yiǧǧen usaḍuf.",
+                            text_ara: "1 - يحترم دستور الإقليم جميع الاديان ويكفل حرية ممارسة كافة الشعائر والمعتقدات. 2 - يحق للأفراد بالاقليم الإحتفال بأعيادهم، و ينظم ذلك بقانون.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_8": {
+                            title_tam: "Amagrad tam (8)",
+                            title_ara: "المادة 8",
+                            text_tam: "Aɣref en Wemnaḍ ila tilelli en usili en tneflit nnes ed wattas nnes adamsan d amunan d adelsan d inezgiyan.",
+                            text_ara: "لشعب الاقليم حرية تحقيق نمائه وتقدمه الاقتصادي والاجتماعي والثقافي والحقوقي.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        }
+                    }
+                },
+                "Tawurt tiss sent": {
+                    title_tam: "Tawurt tiss sent - Inezgan ed tlelliwin",
+                    title_ara: "الباب الثاني - الحقوق والحريات",
+                    articles: {
+                        "article_9": {
+                            title_tam: "Amagrad tẓa (9)",
+                            title_ara: "المادة 9",
+                            text_tam: "1 – Alallu en wemdan yella seg wazalen imattayen akk d si-s ay dd-tteffɣen mdu inezgan en wemdan ed tlelliwin ines, d es uyenni wer izerri wuḍus nnes, d yessefk i mdu tinbaḍin en Wemnaḍ ad et agẓent. 2 – Ad mmuzlent tenbaḍin en Wemnaḍ i usili en yiǧǧet tudert talallit i mdu t\\inamuren\\in en Wemnaḍ, d ad asen ḍekklent taneṭṭuft tadawsant d tamunant.",
+                            text_ara: "1 – كرامة الانسان هي من أسمى القيم ومنها تنطلق جميع حقوق الانسان وحرياته، وعليه لا يجوز المساس بها وعلى جميع السلطات الاقليم حمايتها. 2 – تعمل سلطات الاقليم على تحقيق حياة كريمة لكل مواطني الاقليم، وتضمن لهم الرعاية الصحية والاجتماعية.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_10": {
+                            title_tam: "Amagrad mraw (10)",
+                            title_ara: "المادة 10",
+                            text_tam: "1 – Yal abaliḍ ila inezgi en tlelli d wer izerri wesfata en yiǧǧen wemdan si-s. 2 – Yal abaliḍ ila inezgi en tililt en tlelliwin ines tudmawanin war uḍus en yinezgan en yiḍnin.",
+                            text_ara: "1 – لكل فرد الحق في الحرية ولا يجوز حرمان أحد منها. 2 – لكل فرد الحق في ممارسة حرياته الشخصية دون المساس بحقوق الاخرين.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_11": {
+                            title_tam: "Amagrad mraw-ed-iǧǧen,(11)",
+                            title_ara: "المادة 11",
+                            text_tam: "1 – Akk iterrasen d-igdayen mnid en usaḍuf. 2 – Tameṭṭuṭ ed wergaz ugdan g yinezgan ed tlelliwin, d ad mmuzlent tenbaḍin en Wemnaḍ i uselteɣ ilaw d amalaw en tugdat a jar sent en twetmayin.",
+                            text_ara: "1 – جميع الافراد متساوون أمام القانون. 2 – المراة والرجل متساوون في الحقوق والحريات ، وتعمل سلطات الاقليم على تطبيق الحقيقي والايجابي للمساواة بين الجندر.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_12": {
+                            title_tam: "Amagrad mraw-ed-sen (12)",
+                            title_ara: "المادة 12",
+                            text_tam: "1 – Anamur en Wemnaḍ ila inezgi ed tuɣunt ad yemzeɣ Amnaḍ. 2 – Yallfus usili en yiǧǧet tnafut taɣeṛmant i yiswi en tigawt en yisemmigilen yettnegmaḍen ɣer tulluɣt tamatayt en Wemnaḍ d ad yettwaddes uyenni es yiǧǧen usaḍuf. 3 – Yallfus ugelluy en tuɣunin en t\\inamuren\\in es weswar en yiǧǧen usaḍuf g waddad en cra umija amessuttel neɣ tasakrart neɣ iṛiḍi yettnuwwan Amnaḍ.",
+                            text_ara: "1 – من حق المواطن/ـة (إقليم) ومن الواجب عليه الدفاع عن الإقليم. 2 – يمكن إنشاء خدمة مدنية من أجل القيام بمهام تخص الصالح العام للإقليم وينظم ذلك بقانون. 3 – يمكن تحديد واجبات المواطنين/ـات بموجب قانون في حالة خطر محدق أو كارثة أو نكبة يهدد الإقليم.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_13": {
+                            title_tam: "Amagrad mraw-ed-caṛeḍ (13)",
+                            title_ara: "المادة 13",
+                            text_tam: "1 – Yal inirdi d-imelsi ar telken tnekḍi nnes es yiǧǧen wenkaḍ azurfan amaɣtas. 2 – Inezgi en ummesṛaḍ yettwajbar i iwdan akk. 3 – Yal abaliḍ ila inezgi g yiǧǧen ummesṛaḍ amezlalaɣ d udrif mnid en yiǧǧet tsenbaḍt tamennegmaḍt.",
+                            text_ara: "1 – كل متهم بريء إلى أن تثبت إدانته بحكم قضائي مبرم. 2 – حق التقاضي مصان للجميع. 3 – لكل فرد الحق في محاكمة عادلة وسريعة أمام محكمة مختصة.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_14": {
+                            title_tam: "Amagrad mraw-ed-ukkuẓ,(14)",
+                            title_ara: "المادة 14",
+                            text_tam: "Ad yettwagdel usemnala en manwenma en wemdan i usennulef afekkan neɣ waniman neɣ i yimugguten imeggurzunen neɣ ilekkawanen, d wer telli tmuqqelt i wayenma en usikez ay dd-yettwakksen es wekṛaḍ neɣ es unuwwu neɣ es usennulef, d yezmer umettwakma ad yetter tamaẓilt ɣef tkemmawt tangant d tamadwant ay et yiwɣen, es wassis d id usaḍuf.",
+                            text_ara: "يمنع تعريض أي إنسان للتعذيب الجسدي أو النفسي أو المعاملات القاسية أو المهينة، ولا عبرة لأي اعتراف انتزع بالاكراه أو بالتهديد أو بالتعذيب، وللمتضرر المطالبة بالتعويض عن الضرر المادي والمعنوي الذي أصابه وفقا للقانون.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_15": {
+                            title_tam: "Amagrad mraw-ed-fus,(15)",
+                            title_ara: "المادة 15",
+                            text_tam: "1 – Yal abaliḍ ila inezgi en tudert ed wefrak en yiman ines, d yessefk i tenbaḍin en Wemnaḍ ad et agẓen d wer izerri wesfata en kra en yiǧǧen si-s. 2 – Tettwagdal tmarrut en weslubbeḍ g Wemnaḍ d wer izerri uselteɣ en wenkaḍ a ɣef manwenma en ubaliḍ g Wemnaḍ.",
+                            text_ara: "1 – لكل فرد الحق في الحياة وسلامة شخصه، وعلى سلطات الإقليم أن تحميه ولا يجوز حرمان أحد منه. 2 – حظر عقوبة الإعدام في الإقليم ولا يجوز تطبيق هذا الحكم على أي فرد كان في الإقليم.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_16": {
+                            title_tam: "Amagrad mraw-ed-sḍis (16)",
+                            title_ara: "المادة 16",
+                            text_tam: "1 – Wer izerri wuḍus en tlelli en ufalas neɣ anetti neɣ anugga neɣ tidmi. 2 – Yal abaliḍ neɣ tagrawt lan inezgi en tililt en yisumuden ujjiden es tlelli d ad beddent tenbaḍin en Wemnaḍ ɣef waray en yinezgi a.",
+                            text_ara: "1 – لا يجوز المساس بحرية الإعتقاد أو الإنتماء أو الضمير أو الفكر. 2 – لكل فرد أو مجموعة الحق بممارسة الشعائر الدينية بحرية وتقوم سلطات الإقليم بحماية هذا الحق.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_17": {
+                            title_tam: "Amagrad mraw-ed-sa (17)",
+                            title_ara: "المادة 17",
+                            text_tam: "1 – Asussen d-ilelli, d-amennawan d d-amezzarug. 2 – Yal abaliḍ ila inezgi en tlelli en yiẓri ed usiwel ed tidmi. 3 – Yal abaliḍ ila inezgi en tlelli en wuḍuf en tnumlan ed twengam ed wesnubeg nsent ed wesmuttey nsent ed usenyuddu nsent es wayenma en wammak ay iferren. 4 – Tilelli en tsegri ed tezrawt tussnant. 5 – Ad yettwasikez es uzarug en tesdawiyin tussnanin tikadimiyin d ad yettwaddes uyenni es yiǧǧen usaḍuf.",
+                            text_ara: "1 – الاعلام حر، تعددي و مستقل. 2 – لكل فرد الحق في حرية الرأي والتعبير والفكر. 3 – لكل فرد الحق في حرية الحصول على المعلومات والافكار وتلقيها ونقلها ونشرها بأية وسيلة يختارها. 4 – حرية البحث والدراسة العلمية. 5 – يعترف باستقلال الجامعات العلمية الاكاديمية وينظم ذلك بقانون.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_18": {
+                            title_tam: "Amagrad mraw-ed-tam,(18)",
+                            title_ara: "المادة 18",
+                            text_tam: "1 – Yal aɣeccir g Wemnaḍ ila inezgi ad yedder iǧǧet tɣeccirt talallit d tamallwit, d ad mmuzlent mdu tinbaḍin en Wemnaḍ i useggru en temsutal a. 2 – Ad beddent tenbaḍin en Wemnaḍ ɣef waray ed taggaẓt en twacunt.",
+                            text_ara: "1 – لكل طفل/ـة في الإقليم الحق في أن يعيش طفولة كريمة وهنيئة وتعمل جميع سلطات الإقليم على توفير هذه الظروف. 2 – تتكفل سلطات الإقليم برعاية وحماية الأسرة.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_19": {
+                            title_tam: "Amagrad mraw-ed-tẓa,(19)",
+                            title_ara: "المادة 19",
+                            text_tam: "1 – Ad yettwaḍkal yinezgi en t\\inamuren\\in en Wemnaḍ g waray adawsan d uẓẓuman. 2 – Ad ttmuɣunent tenbaḍin en Wemnaḍ es usuddes es usajji ɣef tdawsa tunbizt ɣef webrid en tesgeynan ed wallalen ed tenfiwin en waray, d ad yettwaddes uyenni es yiǧǧen usaḍuf. 3 – Ad ssurrusent tenbaḍin en Wemnaḍ ɣef usidles ed usermes es usegmi adawsan d afekkan d addalan, i uḍakal en yiǧǧet tuẓẓumt tadawsant.",
+                            text_ara: "1 – حق مواطني الإقليم بالوقاية الصحية والبيئية. 2 – تلتزم سلطات ألإقليم بتنظيم والإشراف على الصحة العمومية عن طريق وسائل والمساعدات والخدمات الوقاية ، وينظم ذلك بقانون. 3 – تشجع السلطات الإقليم بالتثقيف والتوعية بالتربية الصحية والبدنية والرياضية،لضمان بيئة صحية.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_20": {
+                            title_tam: "Amagrad simraw (20)",
+                            title_ara: "المادة 20",
+                            text_tam: "Ad ttmuɣunent tenbaḍin en Wemnaḍ es taggaẓt en tuẓẓumt en tdulit tamɣayant d taywalant ed tbaɣurin tigamanin ed yisegran idasilalnen en tudert i yisuta imyasen.",
+                            text_ara: "تلتزم سلطات الإقليم بحماية البيئة و الغطاء النباتي و الحيواني وثروات الطبيعية ومقومات الحياة الاساسية للأجيال القادمة.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_21": {
+                            title_tam: "Amagrad simraw-ed-iǧǧen (21)",
+                            title_ara: "المادة 21",
+                            text_tam: "1 – Akk anamur ila inezgi ad yaɣ aselmed ed tmessunt. 2 – Aselmed ad yili d-amessenkas di sen en yiẓunaẓ amenzu ed usemmutgan, d d-abennan. 3 – Ad beddent tenbaḍin en Wemnaḍ ɣef umenɣi mgal tinnuzɣa ed tɣennawt en yiǧǧet tuẓẓumt tasegmiyant talemmudant tazedduyant.",
+                            text_ara: "1 – لكل مواطن/ـة الحق في الحصول على التعليم والمعرفة. 2 – يكون التعليم إلزاميا في المرحلتين الابتدائية والإعدادية و مجاناُ. 3 – تتولى سلطات الإقليم مكافحة الأمية وخلق بيئة تربوية تعليمية مستدامة.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_22": {
+                            title_tam: "Amagrad simraw-ed-sen,(22)",
+                            title_ara: "المادة 22",
+                            text_tam: "1 – Ad deblent tenbaḍin inezgi en ummegraw ed westamel ed usiwel alwiyan g wansiwen unbizen d inagmaḍen. 2 – Yessefk i yimessuddsen en westamel g wansiwen unbizen ad ssissnen tasgiwin tideblanin ilan tassaɣt es tizwuri.",
+                            text_ara: "1 – تكفل السلطات الحق في التجمع والتظاهر والتعبير السلمي في الاماكن العامة والخاصة. 2 – على منظمي التظاهر في الاماكن العامة إعلام الجهات الإدارية ذات العلاقة مسبقاُ.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_23": {
+                            title_tam: "Amagrad simraw-ed-caṛeḍ (23)",
+                            title_ara: "المادة 23",
+                            text_tam: "Akk t\\inamuren\\in en Wemnaḍ llan inezgi en uɣalaf en tmujal tunbizin ed yinezgi en ummedraw di tedbelt en tɣawsiwin tunbizin es wassis d id umenzay en ummesmad isulufen ed tezmert.",
+                            text_ara: "لكل مواطني اللإقليم الحق بتولي الوظائف العامة وحق المشاركة في إدارة الشؤون العامة وفق مبدأ تكافؤ الفرص والكفاءة.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_24": {
+                            title_tam: "Amagrad,simraw-ed-ukkuẓ (24)",
+                            title_ara: "المادة 24",
+                            text_tam: "Tilelli en usileɣ en tuddsiwin en wamun aɣeṛman ed tmesmunin ed yimmezdayen ed yinmula ed yimmegrawen.",
+                            text_ara: "حرية تشكيل منظمات المجتمع المدني و الجمعيات والاتحادات والنقابات والتجمعات.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_25": {
+                            title_tam: "Amagrad simraw-ed-fus,(25)",
+                            title_ara: "المادة 25",
+                            text_tam: "1 – Ad yettwagdal usileɣ niɣ asenti en wayenma en teskiwt niɣ tuddsa niɣ tagrawt niɣ akabar yessenfayen niɣ yettzuccunen niɣ yessenyuddun niɣ yesfukulen tidmi tamezzaẓart niɣ tamessawaft niɣ tameskeffert niɣ asizdeg acettalan. 2 – Ad ttmuɣunent tenbaḍin en Wemnaḍ es umenɣi ed wemgaru mgal akk isanayen ed twilawin en usiwef d es umuzel i taggaẓt en tɣellist ed uzeggu en tmura en Wemnaḍ.",
+                            text_ara: "1 – يحظر تشكيل او تأسيس أي كيان او منظمة او جماعة او حزب يتبنى أو يحرض أو يروج له أو يبرره من الفكر العنصري أو الارهابي او تكفيري او التطهير العرقي. 2 – تلتزم سلطات الإقليم بمكافحة ومحاربة جميع مظاهر وأشكال اللإرهاب والعمل على حماية أمن و إستقرار أراضي الإقليم.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_26": {
+                            title_tam: "Amagrad simraw-ed-sḍis,(26)",
+                            title_ara: "المادة 26",
+                            text_tam: "TIRA nneɣ-a ad teḍkel tilelli en usenti en yikabaren isertanen, d ad yettwaddes uyenni es yiǧǧen usaḍuf.",
+                            text_ara: "يكفل هذا الدستور حرية تأسيس الاحزاب السياسية، وينظم ذلك بقانون.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_27": {
+                            title_tam: "Amagrad simraw-ed-sa,(27)",
+                            title_ara: "المادة 27",
+                            text_tam: "1 – Wer izerri ad tettwarẓa tmuggit en tzeddiɣt. 2 – Wer izerri ugawes en tzeddiɣt aysiladd es turagt tazurfant yuran.",
+                            text_ara: "1 – لا يجوز انتهاك وتعرض حرمة المسكن. 2 – لا يجوز تفتيش المسكن إلا بإذن قضائي مكتوب.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_28": {
+                            title_tam: "Amagrad simraw-ed-tam,(28)",
+                            title_ara: "المادة 28",
+                            text_tam: "Tufura en tebratin ed yimyawaḍen tettwaḍekkal d wer tzerri tṛuẓi nnes ɣas es weswar en yiǧǧet turagt tazurfant yuran.",
+                            text_ara: "سرية المراسلات والإتصالات مضمونة ولا يجوز انتهاكها إلا بموجب إذن قضائي مكتوب.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_29": {
+                            title_tam: "Amagrad simraw-ed-tẓa,(29)",
+                            title_ara: "المادة 29",
+                            text_tam: "1 – Tilelli en umuttey ed wezdaɣ ed umuddu tettwaseggar i mdu t\\inamuren\\in en Wemnaḍ. 2 – Wer izerri usiggʷej en t\\inamuren\\in en Wemnaḍ ɣef-s, d wer izerri ugelluy en wezdaɣ nsen neɣ agdal en umuddu nsen.",
+                            text_ara: "1 – حرية التنقل و الإقامة والسفر لجميع مواطني اللإقليم. 2 – لا يجوز إبعاد مواطني الإقليم عنه، ولا يجوز تحديد إقامته أو منعه من السفر.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_30": {
+                            title_tam: "Amagrad cṛamraw (30)",
+                            title_ara: "المادة 30",
+                            text_tam: "1 – Akk anamur ila inezgi en umuzel, d ttmuɣunent tenbaḍin en Wemnaḍ es tɣennawt en yiǧǧet tuẓẓumt ed yiǧǧet teskiwt tadamsant tazedduyant i usseɣlef en yisulufen en umuzel. 2 – Ad deblent tenbaḍin en Wemnaḍ es uḍakal ed usseɣlef amunan, d ad yettwaddes uyenni es yiǧǧen usaḍuf.",
+                            text_ara: "1 – لكل مواطن/ـة الحق في العمل، وتلتزم سلطات الإقليم خلق بيئة وبنية اقتصادية مستدامة لتأمين فرص العمل. 2 – تتكفل سلطات الإقليم بالضمان والتامين الاجتماعي، وينظم ذلك بقانون.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_31": {
+                            title_tam: "Amagrad cṛamraw-ed-iǧǧen,(31)",
+                            title_ara: "المادة 31",
+                            text_tam: "TIRA nneɣ-a ad teḍkel taggaẓt en yinezgan en wayla amadwan d awengiman d ussnan d aẓuriyan d asennefluluyan, d yettwaddas uyenni es yiǧǧen usaḍuf.",
+                            text_ara: "يضمن هذا الدستور حماية حقوق الملكية الادبية والفكرية والعلمية والفنية والإبداعية، وينظم ذلك بقانون.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_32": {
+                            title_tam: "Amagrad cṛamraw-ed-sen,(32)",
+                            title_ara: "المادة 32",
+                            text_tam: "Ad ttwasefran yiḍrisen en yimagraden yizwaren es wayen yettemsasan d id yimenzayen en yinezgan en wemdan ed yilugan en tɣariwin ed wezlulleɣ alsan.",
+                            text_ara: "يتم تفسير نصوص المواد السابقة بما يتوافق مع مبادئ حقوق الانسان وقواعد الاخلاق والعدالة الانسانية.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        }
+                    }
+                },
+                "Tawurt tiss caṛeḍt": {
+                    title_tam: "Tawurt tiss caṛeḍt - Tinbaḍin en Wemnaḍ",
+                    title_ara: "الباب الثالث - سلطات الإقليم",
+                    articles: {
+                        "article_33": {
+                            title_tam: "Amagrad cṛamraw-ed-caṛeḍ (33)",
+                            title_ara: "المادة 33",
+                            text_tam: "Ttmunent tenbaḍin en Wemnaḍ en Infusen es: - Amezwaru: Tanbaḍt Izerfan - Wiss sen: Tanbaḍt Taselkamt - Wiss caṛeḍ: Tanbaḍt Tazurfant",
+                            text_ara: "تتكون سلطات إقليم إنفوسن من : أولاً : سلطة أزرفان ثانياً: السلطة التنفيذية ثالثاً: السلطة القضائية",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_34": {
+                            title_tam: "Amagrad cṛamraw-ed-ukkuẓ (34)",
+                            title_ara: "المادة 34",
+                            text_tam: "1 - Tettwamsal Tenbaḍt Izerfan g Wemnaḍ sɣer yiǧǧen ubeṛlaman qqaṛen as Abeṛlaman en Wemnaḍ en Infusen (BMN). 2 - Yettwaẓar Ubeṛlaman a am d-asaɣul adasilan i weɣtas di tɣawsiwin tugaranin en Weɣref en Wemnaḍ en Infusen.",
+                            text_ara: "1 - تمارس سلطة أزرفان في الإقليم من قبل برلمان يسمى برلمان إقليم إنفوسن. 2 - يعتبر هذا البرلمان المرجع الأساسي للبت في القضايا المصيرية لشعب إقليم إنفوسن.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_35": {
+                            title_tam: "Amagrad cṛamraw-ed-fus (35)",
+                            title_ara: "المادة 35",
+                            text_tam: "Tettmun Tenbaḍt Taselkamt g Wemnaḍ en Infusen es Tselwit en Wemnaḍ ed Useqqim Ineɣlafen, d tettellal tinaḍin ines es wassis d id TIRA nneɣ a ed yisaḍufen yiṭnin ulkimen.",
+                            text_ara: "تتكن السلطة التنفيذية في إقليم إنفوسن من رئاسة الإقليم ومجلس الوزراء، وتمارس صلاحياتها وفقاً لهذا الدستور والقوانين الاخرى النافذة.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_36": {
+                            title_tam: "Amagrad cṛamraw-ed-sḍis (36)",
+                            title_ara: "المادة 36",
+                            text_tam: "T/ Aselway/T en Wemnaḍ d-netta/t yellan d-T/agensas/t en tyunt en Wemnaḍ, d yettakey i uḍakal en usuɣun es TIRA nneɣ, ed waray en Wemnaḍ ed timmuɣṛa nnes ed tfatit ed uzeggu en tmura nnes, es wassis d id tnaḍin en TIRA nneɣ a.",
+                            text_ara: "رئيس/ـة الإقليم هو/هي ممثل/ـة وحدة الإقليم، ويـ/تسهر على ضمان الالتزام بالدستور، والمحافظة على الإقليم وسيادته وسلامة إستقرار أراضيه، وفقاً لأحكام هذا الدستور.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_37": {
+                            title_tam: "Amagrad cṛamraw-ed-sa (37)",
+                            title_ara: "المادة 37",
+                            text_tam: "1 – Aseqqim Ineɣlafen en Wemnaḍ en Infusen d-netta yellan d-tanbaḍt tadeblant d taselkamt g Wemnaḍ. 2 – Ad yettwaglay usileɣ en Useqqim Ineɣlafen es yiǧǧen usaḍuf.",
+                            text_ara: "1 – مجلس وزراء إقليم إنفوسن هو السلطة الإدارية والتنفيذية في الإقليم. 2 – يحدد تشكيل المجلس الوزراء بقانون.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_38": {
+                            title_tam: "Amagrad cṛamraw-ed-tam (38)",
+                            title_ara: "المادة 38",
+                            text_tam: "Tettmun Tenbaḍt Tazurfant g Wemnaḍ en Infusen es Useqqim Uzuref (S.Z.), ed Tsenbaḍt Tamenḍawant (S.M.), ed Wudus en Usurdu Amatay (D.S.M.), ed tsenbaḍin es tfesniwin nsent akk ed yiwesnan nsent ed wudusen nsent, d ad tettwaddes tarrayt en usileɣ nsent ed tfadiwin ed yisekkiren en wesmal en yigmamen nsent es yiǧǧen usaḍuf.",
+                            text_ara: "تتكون السلطة القضائية في إقليم إنفوسن من مجلس القضاء، والمحكمة الدستورية، وهيئة الادعاء العام، والمحاكم بمختلف درجاتها وأنواعها وهيئاتها، وتنظم طريقة تشكيلها وشروط وإجراءات تعيين أعضائها بقانون.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_39": {
+                            title_tam: "Amagrad cṛamraw-ed-tẓa (39)",
+                            title_ara: "المادة 39",
+                            text_tam: "Ad ibedd Ubeṛlaman amezwaru en Wemnaḍ di sḍis wayyuren imezwura seg wemsa jar amezwaru nnes ɣef usenti en usaḍuf en Tenbaḍt Tazurfant g Wemnaḍ en Infusen.",
+                            text_ara: "يقوم أول برلمان للإقليم في أول ستة أشهر من أول اجتماع له، بسن قانون السلطة القضائية في إقليم إنفوسن.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_40": {
+                            title_tam: "Amagrad ukkumraw (40)",
+                            title_ara: "المادة 40",
+                            text_tam: "1 – Azuref d-amezzarug wer ɣef-s yelli unebbeḍ ɣas wenn en TIRA nneɣ ed usaḍuf. 2 – Agemmir en yimezzurfa ed unugga nsen ed wunuf nsen llan d-aḍakal en yinezgan ed tlelliwin en yiwdan.",
+                            text_ara: "1 – القضاء مستقل لا سلطان عليه لغير الدستور والقانون. 2 – شرف القضاة وضميرهم وتجردهم ضمان لحقوق وحريات المواطنين/ـات.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_41": {
+                            title_tam: "Amagrad ukkumraw-ed-iǧǧen (41)",
+                            title_ara: "المادة 41",
+                            text_tam: "Ad dd-tteffɣen yinkaḍen ed yiɣtasen izurfanen d ad ttwaselkamen es yisem en Wagdud en Wemnaḍ en Infusen.",
+                            text_ara: "تصدر الأحكام والقرارات القضائية وتنفذ باسم شعب إقليم إنفوسن.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_42": {
+                            title_tam: "Amagrad ukkumraw-ed-sen (42)",
+                            title_ara: "المادة 42",
+                            text_tam: "Ad tettwasenta es yiǧǧen usaḍuf Tasenbaḍt Tamenḍawant en Wemnaḍ en Infusen.",
+                            text_ara: "تؤسس بقانون المحكمة الدستورية لإقليم إنفوسن.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_43": {
+                            title_tam: "Amagrad ukkumraw-ed-caṛeḍ (43)",
+                            title_ara: "المادة 43",
+                            text_tam: "Ad tettwasuncek Tsenbaḍt Tamenḍawant es tam en yigmamen yella di-sen uselway en Tsenbaḍt, d ad yegley usaḍuf tifadiwin en tegmemt di Tsenbaḍt ed tmamekt en wefran en yigmamen ed tarrayt en wesmal nsen.",
+                            text_ara: "تتشكل المحكمة الدستورية من ثمانية أعضاء بما فيهم رئيس المحكمة، ويحدد القانون شروط العضوية في المحكمة وكيفية اختيار الأعضاء وطريقة تعيينهم.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_44": {
+                            title_tam: "Amagrad ukkumraw-ed-ukkuẓ (44)",
+                            title_ara: "المادة 44",
+                            text_tam: "Inkaḍen en Tsenbaḍt Tamenḍawant d-aggaranen d d-imessenkasen i iwdan akk.",
+                            text_ara: "أحكام المحكمة الدستورية نهائية وملزمة للجميع.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_45": {
+                            title_tam: "Amagrad ukkumraw-ed-fus (45)",
+                            title_ara: "المادة 45",
+                            text_tam: "Yettmun Useqqim Uzuref es uselway en Tsenbaḍt TIRA nneɣ ed yigensasen nnes ed wemsaḍuf amatay ed yiselwayen en tsenbaḍin en temnaḍin tiseḍfaranin g Wemnaḍ.",
+                            text_ara: "يتكون مجلس القضاء من رئيس المحكمة الدستورية ونوابه والمحامي العام و رؤوساء محاكم المناطق الاستئنافية في الإقليم.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_46": {
+                            title_tam: "Amagrad ukkumraw-ed-sḍis (46)",
+                            title_ara: "المادة 46",
+                            text_tam: "Yettgensas Usurdu Amatay ɣef wamun g westan en teɣdemt ed wuguẓ en Unagraw Amatay ed tɣellist en Wemnaḍ ed yiẓerfen imatayen ed wuguẓ en yinezgan ed tlelliwin en t\\inamuren\\in en Wemnaḍ, d ad yettwaddes uyenni es yiǧǧen usaḍuf.",
+                            text_ara: "ينوب الادعاء العام عن المجتمع في الدفاع عن العدالة وحماية النظام العام و أمن الإقليم و الاموال العامة وحماية حقوق وحريات مواطني الاقليم، وينظم ذلك بقانون.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        }
+                    }
+                },
+                "Tawurt tiss ukkuẓt": {
+                    title_tam: "Tawurt tiss ukkuẓt - Tibaɣurin en Wemnaḍ",
+                    title_ara: "الباب الرابع - ثروات الإقليم",
+                    articles: {
+                        "article_47": {
+                            title_tam: "Amagrad ukkumraw-ed-sa (47)",
+                            title_ara: "المادة 47",
+                            text_tam: "1 – Tabaɣurt en ufetṛul ed ugaz tella d-agla en Wagdud akk en Wemnaḍ en Infusen. 2 – Ad ibedd Unabaḍ en Wemnaḍ ɣef tedbelt en tbaɣurt en ufetṛul ed ugaz ay dd-yettwasufuɣen seg wannaren en Wemnaḍ en Infusen, ɣef udasil is ad ttwabḍant tzugaz nnes es yiǧǧet tarrayt tamessumut yettemsasan d id ubeṭṭu en yimezdaɣ di mdu tasgiwin en Wemnaḍ, d ad yettwaddes uyenni es yiǧǧen usaḍuf. 3 – Ad ibedd Unabaḍ en Wemnaḍ en Infusen ɣef wunuɣ en tsertiyin tiddisanin tukmirin i wesnefli en tbaɣurt en ufetṛul ed ugaz es matta ɣa yessilin abɣur amattay akk i Weɣref en Wemnaḍ.",
+                            text_ara: "1 – ثروة النفط والغاز هو ملك كل الشعب إقليم إنفوسن. 2 – تقوم حكومة الإقليم بإدارة ثروة النفط والغاز المستخرج من حقول إقليم إنفوسن على ان توزع وارداتها بشكل منصف يتناسب مع التوزيع السكاني في جميع انحاء الإقليم، وينظم ذلك بقانون. 3 – تقوم الحكومة الإقليم إنفوسن برسم السياسات الاستراتيجية اللازمة لتطوير ثروة النفط والغاز بما يحقق اعلى و ارقى منفعة للشعب الإقليم.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_48": {
+                            title_tam: "Amagrad ukkumraw-ed-tam (48)",
+                            title_ara: "المادة 48",
+                            text_tam: "1 – Ad ibedd Unabaḍ en Wemnaḍ ɣef wunuɣ en tsertiyin en usewci unẓiẓ en yisugam igensanen en waman ed usuddes nsen es matta iḍekklen ajbar nsen ed uzedduy nsen, d ad yettwaddes uyenni es yiǧǧen usaḍuf. 2 – Aɣawas en tsertiyin yeqqnen ɣer yisugam en waman si tniri en Wemnaḍ ed uḍakal en yiswiren en wufuy en waman ɣer-s ed ubeṭṭu nsen es teɣdemt jaj en Wemnaḍ es wassis d id yisaḍufen ed yizerfan imenḍanen.",
+                            text_ara: "1 – تقوم حكومة الإقليم برسم سیاسات الاستغلال والاسترشاد للموارد المائیة الداخلیة وتنظیمھا بما یضمن حفاظه و استدامته، وینظم ذلك بقانون. 2 – تخطیط السیاسات المتعلقة بمصادر المیاه من خارج الإقليم وضمان مناسیب تدفق المیاه الیها وتوزیعھا توزيعا عادلا داخل الإقليم وفقا للقوانین والأعراف الإقليمية.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_49": {
+                            title_tam: "Amagrad ukkumraw-ed-tẓa (49)",
+                            title_ara: "المادة 49",
+                            text_tam: "Ad mmuzlent tenbaḍin en Wemnaḍ i usetrar ed wesnefli en wakk iceṛṛaben idamsanen d es unegmeḍ si-sen iceṛṛaben en tkerza ed usegmi en wulli ed temguriwin en tinḍi i uḍakal en yiǧǧen weswir asaduran azedduyan.",
+                            text_ara: "تعمل سلطات الإقليم على تحديث وتطوير جميع القطاعات الاقتصادية وخصوصا منها قطاعات الزراعة وتربية المواشي والصناعات التقليدية لضمان مستوى معيشي مستدام.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_50": {
+                            title_tam: "Amagrad fumraw (50)",
+                            title_ara: "المادة 50",
+                            text_tam: "Ttwasenbaren yimedraz ed wansiwen ed tsekkiwin timeṭṭunga ed warraten si tbaɣurin en Wemnaḍ, d ttmuɣunent tenbaḍin en Wemnaḍ i waray ed wejbar nsen, d ad yettwaddes uyenni es yiǧǧen usaḍuf.",
+                            text_ara: "تعد الاثار والمواقع والأبنية الاثرية والمخطوطات من ثروات الإقليم، وتلتزم سلطات الاقليم على الحماية و الحفاظ، وينظم ذلك بقانون.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        }
+                    }
+                },
+                "Tawurt tiss fust": {
+                    title_tam: "Tawurt tiss fust - Taɣellist en Wemnaḍ",
+                    title_ara: "الباب الخامس - أمن الإقليم",
+                    articles: {
+                        "article_51": {
+                            title_tam: "Amagrad fumraw-ed-iǧǧen (51)",
+                            title_ara: "المادة 51",
+                            text_tam: "1 – Ad yettwasileɣ yiǧǧen useqqamu umi qqaṛen: Aseqqamu en Tɣellist en Wemnaḍ (S.Ɣ.M.), d yemmezday d id Ubeṛlaman d ttwaglayen yikurmisen nnes ed tnaḍin nnes ed tarrayt en wesmal ed usertek en yigmamen nnes es yiǧǧen usaḍuf. 2 – Ad yili si wayen a jar en tnaḍin en Useqqamu tigawt en yiɣawasen iddisanen i Wemnaḍ ed tiwci en yismittiren g wakkeyenna yeqqnen ɣer tɣellist ed tfatit en Wemnaḍ. 3 – Ad yili Useqqamu en Tɣellist en Wemnaḍ en Infusen saddu tenbaḍt taɣeṛmant, d ad yanez i wesfuru en Tenbaḍt Izerfan, d ad yemmuzel es wassis d id usaḍuf d es weswar en wazalen ed yimenzayen en yinezgan ed tlelliwin en wemdan.",
+                            text_ara: "1 – يشكل مجلس يسمى \" S.Γ.N – \"ASEQQAMU N TΓELLIST N UMNAḌ مجلس أمن إقليم إنفوسن ،ويرتبط بالبرلمان وتحدد تشكيلاته واختصاصاته وطريقة تعيين وعزل أعضائه بقانون. 2 – يكون من بين اختصاصات المجلس وضع الخطط الاستراتجية للإقليم و تقديم الاستشارات في كل ما يتعلق بامن و امان الاقليم. 3 – يكون مجلس أمن إقليم إنفوسن تحت السيطرة المدنية، ويخضع لرقابة سلطة ازرفان، ويعمل وفقاً للقانون وبموجب قيم ومبادئ حقوق وحريات الانسان.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_52": {
+                            title_tam: "Amagrad fumraw-ed-sen (52)",
+                            title_ara: "المادة 52",
+                            text_tam: "1 – Ad yezrekka Wemnaḍ en Infusen akk isaḍufen ed yirkawalen ed yinmaqqanen igramuranen yeqqnen ɣer waray en telwit ed tɣellist tamenḍant d tagramurant. 2 – Ad ttmuɣunent mdu tisuda en Wemnaḍ, tiserdasanin d tiɣellisanin, di tazzilt en yisemmigilen nsent es yiseqqulen ed yimenzayen en yinezgan ed tlelliwin en wemdan.",
+                            text_ara: "1 – يحترم إقليم إنفوسن جميع القوانين والمواثيق والمعاهدات الدولية المتعلق بحفظ السلم والأمن الإقليمي والدولي. 2 – تلتزم جميع مؤسسات الإقليم العسكرية والأمنية في أدائها لمهامها بالمعايير ومبادئ حقوق وحريات الانسان.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_53": {
+                            title_tam: "Amagrad fumraw-ed-caṛeḍ (53)",
+                            title_ara: "المادة 53",
+                            text_tam: "1 – Ad ttwasentan yidwasen umi qqaṛen: D.S.N. Adwas en Westan en Infusen (D.S.N.), asemmigel nnes yella d-taggaẓt en Wemnaḍ mgal ayenma en umija yettnuwwan taɣellist tamatayt di-s. Ad ttwaddsen yikurmisen en yidwasen a iserdasanen ed yisemmigilen nsen ed tẓugayt nsen es yiǧǧen usaḍuf ay dd-ɣa yessufeɣ Ubeṛlaman en Wemnaḍ. 2 – Aɣanas en umuzel ed yimussuten en yidwasen idefriranen en Wemnaḍ, DSN, ad yili jaj en yibuda ikalanen en Wemnaḍ, d wer d-asen izerri ad mmussun d ad ggen cra isemmigilen idefriranen tiniri en Wemnaḍ aysiladd es udeggi en Ubeṛlaman en Wemnaḍ.",
+                            text_ara: "1 – تؤسس قوات تسمى \" S.T.F- ASERDAS ASTAN N INFUSEN\" مهمتها حماية الإقليم من أي خطر يهدد الأمن العام فيه. تنظم تشكيلات هذه القوات العسكرية ومهامها وشعارها بقانون يصدره برلمان الإقليم. 2 – نطاق عمل وتحركات القوات العسكرية \"S.T.F\" للإقليم ضمن الحدود الجغرافية للإقليم، ولا يجوز لها التحرك والقيام بأي مهام عسكرية خارج الإقليم إلا بموافقة برلمان الإقليم.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        }
+                    }
+                },
+                "Tawurt tiss sḍist": {
+                    title_tam: "Tawurt tiss sḍist - Tinaḍin tuẓrifin",
+                    title_ara: "الباب السادس - الأحكام المالية",
+                    articles: {
+                        "article_54": {
+                            title_tam: "Amagrad fumraw-ed-ukkuẓ (54)",
+                            title_ara: "المادة 54",
+                            text_tam: "Ad yettwaglay usuggas uẓrif es yiǧǧen usaḍuf.",
+                            text_ara: "تحدد السنة المالية بقانون.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_55": {
+                            title_tam: "Amagrad fumraw-ed-fus (55)",
+                            title_ara: "المادة 55",
+                            text_tam: "1 – Ad yettwasenta usaḍuf en welzaz en Wemnaḍ yal asuggas uẓrif d ad yettamay tizugaz ed yizemziren yettwadkaḍen. 2 – Ad yefk Unabaḍ en Wemnaḍ asenfar en welzaz i usuggas uẓrif ɣer Ubeṛlaman dassat en caṛeḍ en wussan es wudrus i taggara en usuggas uẓrif.",
+                            text_ara: "1 – يشرع قانون موازنة الإقليم في كل سنة مالية ويتضمن الواردات والنفقات التقديرية. 2 – تقدم حكومة الإقليم مشروع الموازنة للسنة المالية لبرلمان قبل ثلاثة اشهر على الاقل من انتهاء السنة المالية.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_56": {
+                            title_tam: "Amagrad fumraw-ed-sḍis (56)",
+                            title_ara: "المادة 56",
+                            text_tam: "1 – Yessefk i Unabaḍ en Wemnaḍ ad yales d ad yesseyney anagraw uzṛif yal caṛeḍ isuggasen, es tkessit di tmuɣli en mdu isnefliyen ed yisenfilen ed teynayin yettemsaran g yisugam imatayen g Wemnaḍ ed wassaren en tmersal tideblanin ed yizemziren nsent inemmezrayen; d siwes asawen en yisuɣuden ed yiseynayen yettwasumren di telɣa nnes ɣer Ubeṛlaman en Wemnaḍ i wemsawal ɣef-sen ed usufeɣ nsen di twila en yisaḍufen. 2 – Ad ibedd Unabaḍ en Wemnaḍ d dassat en ukkuẓ en wayyuren si taggara en usuggas uẓrif ɣef usileɣ en yiǧǧet tseqqamut tamennegmaḍt en yinaẓrafen ed yidamsanen ed tsudut en tewsiwin, asemmigel nnes yella d-tazrawt en welzaz amaynut dassat usawen nnes ɣer Ubeṛlaman i wemsawal ɣef-s ed wazzray nnes. 3 – Ad tbedd tseqqamut tamennegmaḍt en yinaẓrafen ed yidamsanen ed tsudut en tewsiwin ɣef yisemmigilen dd-yettasen: A – Aḍfar en unagraw uẓrif ed usuddes en temɣan tuẓrifin a jar Anabaḍ ed tsuda en Wemnaḍ. B – Askasi en Ubeṛlaman ɣef teynayin ed yisnefliyen en wassaren uẓrifen jaj en wayjaren ikudanen yettwaglayen ay ɣef yettwamsasa. C – Asumer en yiseqqulen imsisan i yiswi en wemyawas i usseɣlef en wedki uẓrif en Wemnaḍ. Č – Asrus en unagraw agensan nnes es wemsasa a jar igensasen en Unabaḍ ed Ubeṛlaman.",
+                            text_ara: "1 – على حكومة الإقليم مراجعة وتحديث النظام المالي كل ثلاث سنوات، مع الأخذ بعين الاعتبار جميع التطورات والتغييرات والمستجدات الحاصلة على الموارد العامة في الإقليم و احتياجات المؤسسات الادارية ومصروفاتها المختلفة ; ومن ثم رفع التعديلات والتحديثات المقترحة بخصوصه إلى برلمان الإقليم لمناقشتها وإصدارها على شكل قوانين. 2 – تقوم حكومة الإقليم وقبل أربعة أشهر من انتهاء السنة المالية بتشكيل لجنة متخصصة من الماليين والاقتصاديين ومؤسسة الضرائب، مهمتها دراسة الميزانية الجديدة قبل رفعها للبرلمان لمناقشتها والتصديق عليها. 3 – تقوم اللجنة المتخصصة من الماليين والاقتصاديين ومؤسسة الضرائب بالمهام التالية: أ – متابعة النظام المالي وتنظيم العلاقات المالية بين الحكومة ومؤسسات الإقليم. ب – مناقشة البرلمان بمستجدات وتطورات الاحتياجات المالية ضمن فترات زمنية محددة يتم التوافق عليها. ج – اقتراح المعايير المناسبة من أجل التعاون لتأمين الاستقرار المالي للإقليم. د – وضع نظامها الداخلي بالتوافق بين مندوبي الحكومة والبرلمان.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        }
+                    }
+                },
+                "Tawurt tiss sat": {
+                    title_tam: "Tawurt tiss sat - Tinaḍin tineggura",
+                    title_ara: "الباب السابع - الأحكام الختامية",
+                    articles: {
+                        "article_57": {
+                            title_tam: "Amagrad fumraw-ed-sa (57)",
+                            title_ara: "المادة 57",
+                            text_tam: "Ad yili d-inezgi amenḍawan adasilan en Wemnaḍ: 1 – Asefru ed usenẓeḍ en yiẓri en Wemnaḍ dassat en usegmeḍ ɣef wayenma en umeqqun d id ayenma unabaḍ neɣ ayenma en uwanak neɣ tasga neɣ tuddsa tamenḍant neɣ tagramurant ay izemren i wuḍus en ugama en temsutal ed waddaden ed yinezgan en Wemnaḍ. 2 – Yella ɣer Wemnaḍ yinezgi ad yekres ameqqun ed yirkawalen d id yiwanaken ed temnaḍin ed tuddsiwin timenḍanin d tigramuranin.",
+                            text_ara: "يكون حقا دستورياُ أساسياُ للإقليم : 1 – استبيان واستطلع رأي الإقليم قبل التوقيع على أي اتفاقية بين أية الحكومة وأية دولة أو جهة أومنظمة إقليمية أو دولية من شأنها المساس بطبيعة ظروف وأوضاع وحقوق الإقليم. 2 – للإقليم الحق بعقد اتفاق ومعاهدات مع الدول والأقاليم والمنظمات اللإقليمية والدولية.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        },
+                        "article_58": {
+                            title_tam: "Amagrad fumraw-ed-tam (58)",
+                            title_ara: "المادة 58",
+                            text_tam: "1 – Ad yettwasenta es yiǧǧen usaḍuf iǧǧen weɣmis asiran en Wemnaḍ qqaṛen as: “Aɣmis Asiran en Wemnaḍ en Infusen” d ad ttawafsaran yisaḍufen ay dd-yetteffɣen ɣef tenbaḍin en Wemnaḍ di-s. 2 – Ad yettwamuzel es yisaḍufen ay dd-yetteffɣen g Wemnaḍ seg wezmez en wefsar nsen g Weɣmis Asiran, ɣas malla yura di-sen cra wayeṭ.",
+                            text_ara: "1 – تُنشأ بقانون جريدة رسمية للإقليم تُسمى \" الجريدة الرسمية للإقليم إنفوسن\" ويتم نشر القوانين الصادرة عن سلطات الإقليم فيها. 2 – يعمل بالقوانين الصادرة في الإقليم من تاريخ نشرها في الجريدة الرسمية، إلا إذا نص فيها على خلف ذلك.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        }
+                    }
+                },
+                "Tawurt tiss tamt": {
+                    title_tam: "Tawurt tiss tamt - Alekkum en Tira-nneɣ",
+                    title_ara: "الباب الثامن - نفاذ الدustur",
+                    articles: {
+                        "article_59": {
+                            title_tam: "Amagrad fumraw-ed-tẓa (59)",
+                            title_ara: "المادة 59",
+                            text_tam: "1 – Tettwasenbar TIRA nneɣ a am d-tamettwasezrit deffer en udeggi en tugut en yimastayen seg t\\inamuren\\in en Wemnaḍ en Infusen, d ayenni g yiǧǧet tutra-usefru tamatayt yettwaddasen i yiswi a. 2 – Ad tettwafser TIRA nneɣ a g Weɣmis Asiran jaj en mraw en wussan seg wezmez en udeggi ɣef-s di tutra-usefru tamatayt. 3 – Tettwasmutug d tettwafsara TIRA nneɣ es tutlayt Tamaziɣt ed tutlayt Taserɣint ed tutlayt Tinglizt. 4 – Tettwasenbar TIRA nneɣ a am d-tulkimt seg wezmez en wefsar nnes g Weɣmis Asiran.",
+                            text_ara: "1 – يعد هذا الدستور مصدقاُ عليه بعد موافقة أغلبية المصوتين من مواطني إقليم إنفوسن، وذلك في استفتاء عام ينظم لهذا الغرض. 2 – ينشر هذا الدستور في الجريدة الرسمية خلال عشرة أيام من تاريخ الموافقة عليه في الاستفتاء العام من تاريخ نشره في الجريدة الرسمية. 3 – يُعد وينشر الدستور باللغة الامازيغية(تامازيغت) والعربية والانجليزية. 4 – يعد هذا الدستور نافذا من تاريخ نشره في الجريدة الرسمية.",
+                            poll: { agree: 0, disagree: 0, neutral: 0, voted: null }
+                        }
+                    }
+                }
+            },
+            overall_vote: { yes: 0, no: 0, null: 0, voted: null }, // Renamed 'agree' to 'yes' for clarity for overall vote
+            demographics: { ageOver18: null, gender: null, city: null, hasCompleted: false } // User-specific demographic data
+        };
+
+        // Global Firebase instances
+        let app;
+        let db;
+        let auth;
+        let userId;
+
+        let currentLang = 'tam';
+        let chaptersChart = null;
+        let govChart = null;
+
+        // Message Box Function (replaces alert)
+        function showMessageBox(message, type = 'info') {
+            const messageBox = document.createElement('div');
+            messageBox.className = `fixed bottom-4 right-4 p-3 rounded-lg shadow-lg text-white z-50`;
+            if (type === 'success') {
+                messageBox.classList.add('bg-green-500');
+            } else if (type === 'error') {
+                messageBox.classList.add('bg-red-500');
+            } else {
+                messageBox.classList.add('bg-blue-500');
+            }
+            messageBox.textContent = message;
+            document.body.appendChild(messageBox);
+            setTimeout(() => {
+                messageBox.remove();
+            }, 3000);
+        }
+
+        // Firebase Initialization and Auth
+        async function initFirebase() {
+            try {
+                const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+                if (!firebaseConfig || Object.keys(firebaseConfig).length === 0) {
+                    console.error("Firebase config is missing or empty. Firestore will not be initialized.");
+                    showMessageBox("Firebase not configured. Data persistence is disabled.", "error");
+                    return;
+                }
+
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                // Sign in
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                userId = auth.currentUser?.uid || `anonymous_${crypto.randomUUID()}`;
+                console.log("Firebase initialized. User ID:", userId);
+                showMessageBox("Firebase initialized successfully!", "success");
+
+                // Load existing user-specific data (votes and demographics)
+                await loadUserVotes();
+
+                // Set up real-time listener for aggregated counts
+                listenToAggregatedCounts();
+
+                // Initial display update based on loaded user data
+                updateOverallVoteDisplay();
+                renderArticles(currentLang);
+
+                // Check demographics and show modal if not completed
+                if (!constitutionData.demographics.hasCompleted) {
+                    showDemographicModal();
+                    disableVoting(); // Disable voting until demographics are completed
+                } else {
+                    enableVoting(); // Enable voting if demographics are already completed
+                }
+                
+            } catch (error) {
+                console.error("Error initializing Firebase:", error);
+                showMessageBox(`Error initializing Firebase: ${error.message}`, "error");
+            }
+        }
+
+        // Firestore Paths
+        function getUserVotesDocRef() {
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            return doc(db, `artifacts/${appId}/users/${userId}/constitution_user_votes`, 'user_vote_data');
+        }
+
+        function getAggregatedCountsDocRef() {
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            return doc(db, `artifacts/${appId}/public/data/constitution_aggregated_votes`, 'aggregated_counts');
+        }
+
+        // Load User Votes and Demographics
+        async function loadUserVotes() {
+            if (!db || !userId) return;
+            try {
+                const userDocRef = getUserVotesDocRef();
+                const userDocSnap = await getDoc(userDocRef);
+
+                if (userDocSnap.exists()) {
+                    const userData = userDocSnap.data();
+                    console.log("Loaded user data:", userData);
+
+                    // Load article votes
+                    if (userData.articleVotes) {
+                        for (const chapterKey in constitutionData.articles_data) {
+                            for (const articleId in constitutionData.articles_data[chapterKey].articles) {
+                                const articleKeyFirestore = `${chapterKey}-${articleId}`;
+                                if (userData.articleVotes[articleKeyFirestore]) {
+                                    constitutionData.articles_data[chapterKey].articles[articleId].poll.voted = userData.articleVotes[articleKeyFirestore];
+                                }
+                            }
+                        }
+                    }
+                    // Load overall vote
+                    if (userData.overallVote) {
+                        constitutionData.overall_vote.voted = userData.overallVote;
+                    }
+                    // Load demographics
+                    if (userData.demographics) {
+                        constitutionData.demographics = { ...userData.demographics, hasCompleted: true };
+                    }
+                } else {
+                    // If no user data exists, initialize it (especially for demographics tracking)
+                    await setDoc(userDocRef, {
+                        articleVotes: {},
+                        overallVote: null,
+                        demographics: { ageOver18: null, gender: null, city: null },
+                        hasCompletedDemographics: false
+                    }, { merge: true });
+                }
+            } catch (error) {
+                console.error("Error loading user votes or demographics:", error);
+            }
+        }
+
+        // Listen to Aggregated Counts (Public) in real-time
+        function listenToAggregatedCounts() {
+            if (!db) return;
+            const aggregatedDocRef = getAggregatedCountsDocRef();
+
+            onSnapshot(aggregatedDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const aggregatedData = docSnap.data();
+                    console.log("Real-time aggregated counts update:", aggregatedData);
+
+                    // Update article counts
+                    if (aggregatedData.articles) {
+                        for (const chapterKey in constitutionData.articles_data) {
+                            for (const articleId in constitutionData.articles_data[chapterKey].articles) {
+                                const articleKeyFirestore = `${chapterKey}-${articleId}`;
+                                if (aggregatedData.articles[articleKeyFirestore]) {
+                                    constitutionData.articles_data[chapterKey].articles[articleId].poll.agree = aggregatedData.articles[articleKeyFirestore].agree || 0;
+                                    constitutionData.articles_data[chapterKey].articles[articleId].poll.disagree = aggregatedData.articles[articleKeyFirestore].disagree || 0;
+                                    constitutionData.articles_data[chapterKey].articles[articleId].poll.neutral = aggregatedData.articles[articleKeyFirestore].neutral || 0;
+                                }
+                            }
+                        }
+                    }
+                    // Update overall vote counts
+                    if (aggregatedData.overall) {
+                        constitutionData.overall_vote.yes = aggregatedData.overall.yes || 0;
+                        constitutionData.overall_vote.no = aggregatedData.overall.no || 0;
+                        constitutionData.overall_vote.null = aggregatedData.overall.null || 0;
+                    }
+                    // Update the unique voter counter
+                    const uniqueVotersSpan = document.getElementById('unique-voters-count');
+                    if (uniqueVotersSpan) {
+                        uniqueVotersSpan.textContent = aggregatedData.totalUniqueVoters || 0;
+                    }
+
+                    // Re-render relevant parts of the UI to reflect changes
+                    renderArticles(currentLang);
+                    updateOverallVoteDisplay();
+                } else {
+                    console.log("Aggregated counts document does not exist, initializing.");
+                    // Initialize aggregated counts document if it doesn't exist
+                    setDoc(aggregatedDocRef, {
+                        articles: {},
+                        overall: { yes: 0, no: 0, null: 0 },
+                        totalUniqueVoters: 0
+                    });
+                }
+            }, (error) => {
+                console.error("Error listening to aggregated counts:", error);
+                showMessageBox("Error receiving real-time updates.", "error");
+            });
+        }
+
+
+        // Save Article Vote to Firestore
+        async function saveArticleVote(chapterKey, articleId, voteType) {
+            if (!db || !userId || !constitutionData.demographics.hasCompleted) {
+                showMessageBox(constitutionData.demographics_error_incomplete[currentLang], "info");
+                return;
+            }
+
+            try {
+                const userDocRef = getUserVotesDocRef();
+                const aggregatedDocRef = getAggregatedCountsDocRef();
+                const articleKeyFirestore = `${chapterKey}-${articleId}`;
+
+                // Mark previous vote as decremented if changing vote
+                const prevVote = constitutionData.articles_data[chapterKey].articles[articleId].poll.voted;
+                const updates = {};
+                if (prevVote) {
+                    updates[`articles.${articleKeyFirestore}.${prevVote}`] = increment(-1);
+                }
+                
+                // Update current vote
+                updates[`articles.${articleKeyFirestore}.${voteType}`] = increment(1);
+
+                // Update user's private vote
+                await updateDoc(userDocRef, {
+                    [`articleVotes.${articleKeyFirestore}`]: voteType
+                }, { merge: true });
+
+                // Update public aggregated counts using increment
+                await updateDoc(aggregatedDocRef, updates, { merge: true });
+
+                showMessageBox(currentLang === 'ara' ? "تم تسجيل صوتك!" : "Your vote has been recorded!", "success");
+
+                // UI will be updated by the onSnapshot listener
+            } catch (error) {
+                console.error("Error saving article vote:", error);
+                showMessageBox(`${currentLang === 'ara' ? "خطأ في حفظ التصويت: " : "Error saving vote: "}${error.message}`, "error");
+            }
+        }
+
+        // Save Overall Vote to Firestore
+        async function saveOverallVote(voteType) {
+            if (!db || !userId || !constitutionData.demographics.hasCompleted) {
+                showMessageBox(constitutionData.demographics_error_incomplete[currentLang], "info");
+                return;
+            }
+
+            try {
+                const userDocRef = getUserVotesDocRef();
+                const aggregatedDocRef = getAggregatedCountsDocRef();
+
+                // Mark previous vote as decremented if changing vote
+                const prevOverallVote = constitutionData.overall_vote.voted;
+                const updates = {};
+                if (prevOverallVote) {
+                    updates[`overall.${prevOverallVote}`] = increment(-1);
+                }
+
+                // Update current vote
+                updates[`overall.${voteType}`] = increment(1);
+
+                // Update user's private overall vote
+                await updateDoc(userDocRef, {
+                    overallVote: voteType
+                }, { merge: true });
+
+                // Update public aggregated counts using increment
+                await updateDoc(aggregatedDocRef, updates, { merge: true });
+
+                showMessageBox(currentLang === 'ara' ? "تم تسجيل صوتك العام!" : "Your overall vote has been recorded!", "success");
+
+                // UI will be updated by the onSnapshot listener
+            } catch (error) {
+                console.error("Error saving overall vote:", error);
+                showMessageBox(`${currentLang === 'ara' ? "خطأ في حفظ التصويت العام: " : "Error saving overall vote: "}${error.message}`, "error");
+            }
+        }
+
+        // --- Demographic Modal Functions ---
+        function showDemographicModal() {
+            const modal = document.getElementById('demographic-modal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex'); // Use flex to center it
+                updateDemographicFormLanguage(); // Ensure form fields are translated
+            }
+        }
+
+        function hideDemographicModal() {
+            const modal = document.getElementById('demographic-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+        }
+
+        function updateDemographicFormLanguage() {
+            document.getElementById('demographics-title').textContent = constitutionData.demographics_title[currentLang];
+            document.getElementById('demographics-subtitle').textContent = constitutionData.demographics_subtitle[currentLang];
+            
+            document.getElementById('age-question').textContent = constitutionData.age_question[currentLang];
+            document.getElementById('age-yes-label').textContent = constitutionData.age_yes[currentLang];
+            document.getElementById('age-no-label').textContent = constitutionData.age_no[currentLang];
+
+            document.getElementById('gender-question').textContent = constitutionData.gender_question[currentLang];
+            document.getElementById('gender-male-label').textContent = constitutionData.gender_male[currentLang];
+            document.getElementById('gender-female-label').textContent = constitutionData.gender_female[currentLang];
+
+            document.getElementById('city-question').textContent = constitutionData.city_question[currentLang];
+            const citySelect = document.getElementById('city-select');
+            citySelect.innerHTML = `<option value="">-- ${constitutionData.city_question[currentLang]} --</option>`; // Default option
+            const cities = [
+                'yefren', 'qal3et', 'jadu', 'amsin', 'fersetta', 'tindemirt',
+                'tamlucayt', 'tintemzin', 'kabaw', 'lalut', 'ghadames'
+            ];
+            cities.forEach(cityKey => {
+                const option = document.createElement('option');
+                option.value = cityKey;
+                option.textContent = constitutionData[`city_${cityKey}`][currentLang];
+                citySelect.appendChild(option);
+            });
+
+            document.getElementById('submit-demographics').textContent = constitutionData.submit_demographics[currentLang];
+        }
+
+        async function handleDemographicSubmit(event) {
+            event.preventDefault();
+            const ageOver18 = document.querySelector('input[name="age"]:checked')?.value;
+            const gender = document.querySelector('input[name="gender"]:checked')?.value;
+            const city = document.getElementById('city-select')?.value;
+
+            if (!ageOver18 || !gender || !city) {
+                showMessageBox(constitutionData.demographics_error_incomplete[currentLang], "info");
+                return;
+            }
+
+            if (!db || !userId) {
+                showMessageBox(currentLang === 'ara' ? "خطأ: لم يتم تهيئة Firebase بعد." : "Error: Firebase not initialized yet.", "error");
+                return;
+            }
+
+            try {
+                const userDocRef = getUserVotesDocRef();
+                const aggregatedDocRef = getAggregatedCountsDocRef();
+                
+                // Check if demographics were already completed to avoid double counting unique voters
+                const userDocSnap = await getDoc(userDocRef);
+                const userData = userDocSnap.data();
+                const wasDemographicsCompleted = userData?.hasCompletedDemographics || false;
+
+                // Update user's private demographic data
+                await updateDoc(userDocRef, {
+                    demographics: { ageOver18: ageOver18 === 'yes', gender, city },
+                    hasCompletedDemographics: true
+                }, { merge: true });
+
+                // Increment total unique voters only if it's the first time
+                if (!wasDemographicsCompleted) {
+                    await updateDoc(aggregatedDocRef, {
+                        totalUniqueVoters: increment(1)
+                    }, { merge: true });
+                }
+
+                constitutionData.demographics = { ageOver18: ageOver18 === 'yes', gender, city, hasCompleted: true };
+                showMessageBox(currentLang === 'ara' ? "تم حفظ بياناتك الديموغرافية!" : "Demographic data saved!", "success");
+                hideDemographicModal();
+                enableVoting(); // Enable voting after demographics are completed
+                // No need to loadAggregatedCounts here, onSnapshot will handle it
+            } catch (error) {
+                console.error("Error saving demographic data:", error);
+                showMessageBox(`${currentLang === 'ara' ? "خطأ في حفظ البيانات: " : "Error saving data: "}${error.message}`, "error");
+            }
+        }
+
+        // --- Handle Article Vote Function ---
+        async function handleArticleVote(event) {
+            const button = event.currentTarget;
+            const articleId = button.dataset.articleId;
+            const chapterKey = button.dataset.chapterKey;
+            const voteType = button.dataset.vote;
+
+            if (!constitutionData.demographics.hasCompleted) {
+                showMessageBox(constitutionData.demographics_error_incomplete[currentLang], "info");
+                return;
+            }
+
+            // Update local state to reflect the vote before saving,
+            // this is important for `saveArticleVote` to correctly decrement the previous vote
+            constitutionData.articles_data[chapterKey].articles[articleId].poll.voted = voteType;
+            await saveArticleVote(chapterKey, articleId, voteType);
+        }
+
+        // --- Enable/Disable Voting Functions ---
+        function disableVoting() {
+            document.querySelectorAll('.vote-button').forEach(button => {
+                button.disabled = true;
+            });
+        }
+
+        function enableVoting() {
+            document.querySelectorAll('.vote-button').forEach(button => {
+                // Re-enable only if the user hasn't voted on that specific item yet
+                const articleId = button.dataset.articleId;
+                const chapterKey = button.dataset.chapterKey;
+
+                if (articleId && chapterKey) { // Article poll button
+                    const article = constitutionData.articles_data[chapterKey]?.articles[articleId];
+                    if (article && !article.poll.voted) {
+                        button.disabled = false;
+                    }
+                } else { // Overall vote button
+                    if (!constitutionData.overall_vote.voted) {
+                        button.disabled = false;
+                    }
+                }
+            });
+        }
+
+
+        // --- Existing Functions (Modified for Firebase where necessary) ---
+        function updateContent(lang) {
+            currentLang = lang;
+            document.documentElement.lang = lang === 'ara' ? 'ar' : 'en';
+            document.documentElement.dir = lang === 'ara' ? 'rtl' : 'ltr';
+
+            document.querySelectorAll('[data-key]').forEach(el => {
+                const key = el.dataset.key;
+                if (constitutionData[key] && constitutionData[key][lang]) {
+                    el.innerHTML = constitutionData[key][lang];
+                }
+            });
+
+            document.getElementById('lang-tam').classList.toggle('active', lang === 'tam');
+            document.getElementById('lang-ara').classList.toggle('active', lang === 'ara');
+            
+            const sidebar = document.getElementById('sidebar');
+            if (lang === 'ara') {
+                sidebar.classList.remove('left-0');
+                sidebar.classList.add('right-0');
+                document.querySelector('main').classList.remove('md:ml-64');
+                document.querySelector('main').classList.add('md:mr-64');
+            } else {
+                sidebar.classList.remove('right-0');
+                sidebar.classList.add('left-0');
+                document.querySelector('main').classList.remove('md:mr-64');
+                document.querySelector('main').classList.add('md:ml-64');
+            }
+
+            // These functions re-render charts and article polls,
+            // which in turn update their values from constitutionData
+            renderArticles(lang);
+            updateInfographic(lang);
+            updateGovChart(lang);
+            updateOverallVoteDisplay();
+            updateDemographicFormLanguage(); // Update language for the modal
+        }
+
+        function renderArticles(lang) {
+            const chaptersContainer = document.getElementById('chapters-container');
+            chaptersContainer.innerHTML = ''; // Clear previous articles for re-rendering
+
+            for (const chapterKey in constitutionData.articles_data) {
+                const chapterData = constitutionData.articles_data[chapterKey];
+                const chapterElement = document.createElement('div');
+                chapterElement.className = 'bg-white p-6 rounded-lg shadow-sm mb-4';
+                chapterElement.innerHTML = `
+                    <h3 class="text-2xl font-bold text-stone-700 mb-4">${chapterData[lang === 'ara' ? 'title_ara' : 'title_tam']}</h3>
+                    <div class="space-y-3" id="chapter-${chapterKey.replace(/\s/g, '-')}-articles"></div>
+                `;
+                chaptersContainer.appendChild(chapterElement);
+
+                const articlesListContainer = chapterElement.querySelector(`#chapter-${chapterKey.replace(/\s/g, '-')}-articles`);
+
+                for (const articleId in chapterData.articles) {
+                    const articleData = constitutionData.articles_data[chapterKey].articles[articleId];
+                    const articleElement = document.createElement('div');
+                    articleElement.className = 'border border-gray-200 rounded-md p-4 bg-gray-50';
+                    articleElement.innerHTML = `
+                        <div class="article-card-header">
+                            <h4 class="font-semibold text-lg text-stone-600">${articleData[lang === 'ara' ? 'title_ara' : 'title_tam']}</h4>
+                            <span class="text-gray-500 text-sm">▼</span>
+                        </div>
+                        <div class="article-content mt-3 space-y-3">
+                            <p class="text-stone-700">${articleData[lang === 'ara' ? 'text_ara' : 'text_tam']}</p>
+                            <div class="poll-options flex flex-wrap gap-2 pt-3 border-t border-gray-200 mt-3">
+                                <button class="vote-button" data-article-id="${articleId}" data-chapter-key="${chapterKey}" data-vote="agree">✅ <span data-key="vote_yes_label"></span></button>
+                                <button class="vote-button" data-article-id="${articleId}" data-chapter-key="${chapterKey}" data-vote="disagree">❌ <span data-key="vote_no_label"></span></button>
+                                <button class="vote-button" data-article-id="${articleId}" data-chapter-key="${chapterKey}" data-vote="neutral">⚪ <span data-key="vote_null_label"></span></button>
+                                <div class="flex items-center text-sm ml-auto gap-3 text-stone-600">
+                                    <span class="text-green-600">✅ <span id="poll-${articleId}-agree">${articleData.poll.agree}</span></span>
+                                    <span class="text-red-600">❌ <span id="poll-${articleId}-disagree">${articleData.poll.disagree}</span></span>
+                                    <span class="text-gray-500">⚪ <span id="poll-${articleId}-neutral">${articleData.poll.neutral}</span></span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    articlesListContainer.appendChild(articleElement);
+
+                    const header = articleElement.querySelector('.article-card-header');
+                    const content = articleElement.querySelector('.article-content');
+                    // Collapse by default
+                    content.style.display = 'none'; 
+
+                    header.addEventListener('click', () => {
+                        content.style.display = content.style.display === 'block' ? 'none' : 'block';
+                        header.querySelector('span').textContent = content.style.display === 'block' ? '▲' : '▼';
+                    });
+
+                    // Update poll buttons state
+                    const voteButtons = articleElement.querySelectorAll('.poll-options .vote-button');
+                    voteButtons.forEach(button => {
+                        const spanElement = button.querySelector('[data-key]');
+                        if (spanElement) {
+                            const keyForSpan = spanElement.dataset.key;
+                            if (constitutionData[keyForSpan] && constitutionData[keyForSpan][lang]) {
+                                spanElement.innerHTML = constitutionData[keyForSpan][lang];
+                            }
+                        }
+                        
+                        button.addEventListener('click', handleArticleVote);
+                        
+                        // Disable and style if already voted by this user
+                        // This uses the locally loaded constitutionData, which includes user-specific votes
+                        if (articleData.poll.voted) {
+                            button.disabled = true;
+                            if (button.dataset.vote === articleData.poll.voted) {
+                                button.classList.add(articleData.poll.voted);
+                            }
+                        } else if (!constitutionData.demographics.hasCompleted) {
+                            button.disabled = true;
+                        }
+                    });
+                }
+            }
+        }
+
+
+        function updateInfographic(lang) {
+            const chapterLabels = [];
+            const articleCounts = [];
+            let totalArticles = 0;
+            let totalChapters = 0;
+
+            for (const chapterKey in constitutionData.articles_data) {
+                totalChapters++;
+                const chapterData = constitutionData.articles_data[chapterKey];
+                const chapterTitle = chapterData[lang === 'ara' ? 'title_ara' : 'title_tam'];
+                const count = Object.keys(chapterData.articles).length;
+                chapterLabels.push(chapterTitle.split(' - ')[0]); // Use just the chapter number/name
+                articleCounts.push(count);
+                totalArticles += count;
+            }
+
+            document.getElementById('total-chapters').textContent = totalChapters;
+            document.getElementById('total-articles').textContent = totalArticles;
+
+            const ctx = document.getElementById('articlesPerChapterChart').getContext('2d');
+            if (chaptersChart) {
+                chaptersChart.destroy();
+            }
+            chaptersChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: chapterLabels.map(label => {
+                        // Chart.js label wrapping for long labels (approx 16 chars)
+                        if (label.length > 16) {
+                            return label.match(/.{1,16}/g);
+                        }
+                        return label;
+                    }),
+                    datasets: [{
+                        label: lang === 'ara' ? 'عدد المواد' : 'Number of Articles',
+                        data: articleCounts,
+                        backgroundColor: '#a88b68',
+                        borderColor: '#a88b68',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false,
+                        },
+                        title: {
+                            display: true,
+                            text: lang === 'ara' ? 'عدد المواد لكل باب' : 'Number of Articles Per Chapter',
+                            color: '#4a4a4a',
+                            font: { size: 18, weight: 'bold' }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: '#4a4a4a',
+                                callback: function(value) { if (value % 1 === 0) return value; } // Only show whole numbers
+                            },
+                            grid: {
+                                color: '#f0ebe5'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: '#4a4a4a'
+                            },
+                            grid: {
+                                color: '#f0ebe5'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateGovChart(lang) {
+            const ctx = document.getElementById('govChart').getContext('2d');
+            const chartTitle = constitutionData.gov_chart_title[lang];
+            const branch1 = constitutionData.gov_branch_1_title[lang];
+            const branch2 = constitutionData.gov_branch_2_title[lang];
+            const branch3 = constitutionData.gov_branch_3_title[lang];
+
+            if (govChart) {
+                govChart.destroy();
+            }
+
+            govChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: [branch1, branch2, branch3],
+                    datasets: [{
+                        data: [33.3, 33.3, 33.3],
+                        backgroundColor: ['#3b82f6', '#16a34a', '#8b5cf6'],
+                        borderColor: '#fdfcfb',
+                        borderWidth: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#4a4a4a',
+                                font: { size: 14 }
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: chartTitle,
+                            color: '#4a4a4a',
+                            font: { size: 18, weight: 'bold' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateOverallVoteDisplay() {
+            document.getElementById('overall-vote-yes').textContent = constitutionData.overall_vote.yes;
+            document.getElementById('overall-vote-no').textContent = constitutionData.overall_vote.no;
+            document.getElementById('overall-vote-null').textContent = constitutionData.overall_vote.null;
+
+            const voteButtons = document.querySelectorAll('#overall-vote .vote-button');
+            voteButtons.forEach(button => {
+                // Check local user vote status
+                if (constitutionData.overall_vote.voted) {
+                    button.disabled = true;
+                    if (button.dataset.vote === constitutionData.overall_vote.voted) {
+                        button.classList.add(constitutionData.overall_vote.voted === 'yes' ? 'agree' : (constitutionData.overall_vote.voted === 'no' ? 'disagree' : 'neutral'));
+                    }
+                } else {
+                    button.disabled = false; // Re-enable if no vote recorded for this user
+                    button.classList.remove('agree', 'disagree', 'neutral');
+                    if (!constitutionData.demographics.hasCompleted) {
+                         button.disabled = true; // Still disable if demographics not completed
+                    }
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const sidebarLinks = document.querySelectorAll('.sidebar-link');
+            const contentSections = document.querySelectorAll('.content-section');
+
+            function updateActiveLink(hash) {
+                contentSections.forEach(section => {
+                    section.classList.remove('active'); // Hide all sections first
+                });
+                const activeSection = document.querySelector(hash);
+                if (activeSection) {
+                    activeSection.classList.add('active'); // Show only the active one
+                }
+
+                sidebarLinks.forEach(link => {
+                    link.classList.toggle('active', link.hash === hash);
+                });
+                
+                if (window.innerWidth < 768) {
+                    document.getElementById('sidebar').classList.add('-translate-x-full'); // Hide sidebar on mobile after clicking link
+                }
+            }
+            
+            sidebarLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    history.pushState(null, '', e.currentTarget.hash);
+                    updateActiveLink(e.currentTarget.hash);
+                });
+            });
+
+            document.getElementById('lang-tam').addEventListener('click', () => updateContent('tam'));
+            document.getElementById('lang-ara').addEventListener('click', () => updateContent('ara'));
+            
+            const menuButton = document.getElementById('menu-button');
+            const sidebar = document.getElementById('sidebar');
+            menuButton.addEventListener('click', () => {
+                sidebar.classList.toggle('-translate-x-full');
+            });
+
+            document.getElementById('demographic-form').addEventListener('submit', handleDemographicSubmit);
+
+            document.querySelectorAll('#overall-vote .vote-button').forEach(button => {
+                button.addEventListener('click', async (e) => {
+                    if (!constitutionData.demographics.hasCompleted) {
+                        showMessageBox(constitutionData.demographics_error_incomplete[currentLang], "info");
+                        return;
+                    }
+
+                    // Update local state to reflect the vote before saving,
+                    // this is important for `saveOverallVote` to correctly decrement the previous vote
+                    constitutionData.overall_vote.voted = e.currentTarget.dataset.vote;
+                    await saveOverallVote(e.currentTarget.dataset.vote);
+                });
+            });
+
+            const initialHash = window.location.hash || '#preamble';
+            updateActiveLink(initialHash);
+            updateContent('tam');
+            
+            // Initialize Firebase after DOM is loaded and initial content is set
+            await initFirebase();
+        });
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Custom gradient for the main content area */
+        main {
+            background-color: #FAF9F6; /* New subtle off-white background */
+        }
+
+        /* Hide all content sections by default */
+        .content-section {
+            display: none;
+        }
+
+        /* Show only the active content section */
+        .content-section.active {
+            display: block;
+        }
+
+        .sidebar-logo {
+            padding: 1rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-bottom: 1px solid #e5e7eb; /* Same as border-b-gray-200 */
+        }
+        .sidebar-logo img {
+            max-width: 100%;
+            height: auto;
+            max-height: 80px; /* Adjust as needed */
+        }
+        /* Styling for active sidebar link */
+        .sidebar-link.active {
+            background-color: #a88b68; /* Accent color for active link */
+            color: white;
+            font-weight: bold;
+        }
+        /* Hover effect for sidebar links */
+        .sidebar-link:not(.active):hover {
+            background-color: #f0f4f8; /* Light gray on hover */
+        }
+        /* Language toggle active state */
+        .lang-toggle.active {
+            background-color: #a88b68;
+            color: white;
+        }
+        /* Language toggle hover state */
+        .lang-toggle:not(.active):hover {
+            background-color: #e5e7eb;
+        }
+
+        /* Vote button styles */
+        .vote-button {
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem; /* rounded-md */
+            font-weight: 600; /* font-semibold */
+            color: white;
+            transition: background-color 0.2s;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .vote-button.agree {
+            background-color: #10B981; /* green-500 */
+        }
+        .vote-button.disagree {
+            background-color: #EF4444; /* red-500 */
+        }
+        .vote-button.neutral {
+            background-color: #9CA3AF; /* gray-400 */
+        }
+        .vote-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        /* Specific hover styles for vote buttons that are not disabled */
+        .vote-button:not(:disabled)[data-vote="agree"]:hover {
+            background-color: #059669; /* green-600 */
+        }
+        .vote-button:not(:disabled)[data-vote="disagree"]:hover {
+            background-color: #DC2626; /* red-600 */
+        }
+        .vote-button:not(:disabled)[data-vote="neutral"]:hover {
+            background-color: #6B7280; /* gray-500 */
+        }
+
+        /* Gov branch card styling */
+        .gov-branch {
+            background-color: #ffffff;
+            border-radius: 0.5rem; /* rounded-lg */
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); /* shadow-sm */
+        }
+        .gov-branch h3 {
+            margin-bottom: 0.5rem;
+        }
+        .gov-branch:nth-child(1) h3 { color: #3b82f6; } /* blue-700 */
+        .gov-branch:nth-child(2) h3 { color: #16a34a; } /* green-700 */
+        .gov-branch:nth-child(3) h3 { color: #8b5cf6; } /* purple-700 */
+
+        /* Card for resources */
+        .card {
+            background-color: #ffffff;
+            border-radius: 0.5rem; /* rounded-lg */
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); /* shadow-sm */
+            border: 1px solid #e5e7eb; /* gray-200 */
+        }
+
+        /* Chart container styling */
+        .chart-container {
+            position: relative;
+            height: 400px; /* Fixed height for consistency */
+            width: 100%;
+            background-color: white;
+            padding: 1.5rem; /* p-6 */
+            border-radius: 0.5rem; /* rounded-lg */
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); /* shadow-sm */
+        }
+
+        /* Mobile menu button */
+        #menu-button {
+            background-color: white;
+            border-radius: 9999px; /* rounded-full */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* shadow-md */
+        }
+
+        /* Ensure smooth transitions for sidebar */
+        #sidebar {
+            transition: transform 0.3s ease-in-out;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 767px) {
+            .content-section {
+                padding-top: 4rem; /* Adjust for fixed menu button */
+            }
+        }
+
+        /* Demographic Modal specific styles */
+        #demographic-modal .modal-content-wrapper {
+            position: relative;
+            background-color: white; /* Explicitly set white background */
+            padding: 2rem;
+            border-radius: 0.5rem; /* rounded-lg */
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); /* shadow-xl */
+            max-width: 28rem; /* max-w-md */
+            width: 100%;
+            overflow: hidden; /* Ensure watermark doesn't spill */
+        }
+
+        #demographic-modal .watermark-logo {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%; /* Adjust size as needed */
+            height: auto;
+            opacity: 0.1; /* Very subtle */
+            z-index: 0; /* Behind content */
+            pointer-events: none; /* Make it unclickable */
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <div class="flex min-h-screen">
+        <!-- Sidebar -->
+        <aside id="sidebar" class="w-64 bg-white shadow-md fixed h-full top-0 left-0 z-10 flex-col transition-transform -translate-x-full md:translate-x-0">
+            <div class="sidebar-logo">
+                <img src="logo Tira.jpg" alt="Constitution Logo">
+            </div>
+            <div class="p-6 text-center border-b border-gray-200">
+                <h1 class="text-xl font-bold text-stone-700" data-key="sidebar_title"></h1>
+            </div>
+            <nav class="flex-1 p-4 space-y-2">
+                <a href="#preamble" class="sidebar-link block p-3 rounded-r-lg" data-key="nav_preamble"></a>
+                <a href="#articles" class="sidebar-link block p-3 rounded-r-lg" data-key="nav_articles"></a>
+                <a href="#infographic" class="sidebar-link block p-3 rounded-r-lg" data-key="nav_infographic"></a>
+                <a href="#government" class="sidebar-link block p-3 rounded-r-lg" data-key="nav_government"></a>
+                <a href="#resources" class="sidebar-link block p-3 rounded-r-lg" data-key="nav_resources"></a>
+                <a href="#overall-vote" class="sidebar-link block p-3 rounded-r-lg" data-key="nav_overall_vote"></a>
+            </nav>
+            <div class="p-4 mt-auto border-t border-gray-200">
+                <div class="flex justify-center rounded-lg p-1 bg-stone-200">
+                    <button id="lang-tam" class="lang-toggle text-sm font-semibold py-2 px-4 rounded-md w-1/2" data-lang="tam">Tamazight</button>
+                    <button id="lang-ara" class="lang-toggle text-sm font-semibold py-2 px-4 rounded-md w-1/2" data-lang="ara">العربية</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 md:ml-64 p-4 sm:p-6 md:p-10">
+             <button id="menu-button" class="md:hidden fixed top-4 left-4 z-20 p-2 bg-white rounded-full shadow-md">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+            </button>
+
+            <!-- Preamble Section -->
+            <section id="preamble" class="content-section">
+                <h2 class="text-3xl font-bold text-stone-800 mb-4" data-key="preamble_title"></h2>
+                <div class="p-6 bg-white rounded-lg shadow-sm space-y-4 text-lg leading-relaxed" data-key="preamble_text"></div>
+                <div class="mt-6 p-4 bg-yellow-50 rounded-lg text-yellow-800 font-semibold">
+                    <span data-key="unique_voters_counter"></span> <span id="unique-voters-count" class="text-xl">0</span>
+                </div>
+            </section>
+
+            <!-- Articles Section -->
+            <section id="articles" class="content-section">
+                <h2 class="text-3xl font-bold text-stone-800 mb-2" data-key="articles_main_title"></h2>
+                <p class="text-lg text-stone-600 mb-6" data-key="articles_main_subtitle"></p>
+
+                <div id="chapters-container" class="space-y-6">
+                    <!-- Chapters and Articles will be dynamically loaded here -->
+                </div>
+            </section>
+
+            <!-- Infographic Section -->
+            <section id="infographic" class="content-section">
+                <h2 class="text-3xl font-bold text-stone-800 mb-2" data-key="infographic_title"></h2>
+                <p class="text-lg text-stone-600 mb-6" data-key="infographic_subtitle"></p>
+
+                <div class="flex flex-col md:flex-row gap-8 items-center justify-center mb-10">
+                    <div class="bg-white p-6 rounded-lg shadow-sm text-center">
+                        <p class="text-5xl font-bold text-a88b68" id="total-chapters"></p>
+                        <p class="text-stone-600" data-key="total_chapters_label"></p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-sm text-center">
+                        <p class="text-5xl font-bold text-a88b68" id="total-articles"></p>
+                        <p class="text-stone-600" data-key="total_articles_label"></p>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <canvas id="articlesPerChapterChart"></canvas>
+                </div>
+            </section>
+
+            <!-- Government Structure Section -->
+            <section id="government" class="content-section">
+                <h2 class="text-3xl font-bold text-stone-800 mb-2" data-key="gov_title"></h2>
+                <p class="text-lg text-stone-600 mb-6" data-key="gov_subtitle"></p>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                    <div class="chart-container">
+                        <canvas id="govChart"></canvas>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="gov-branch p-4 rounded-lg">
+                            <h3 class="font-bold text-xl text-blue-700" data-key="gov_branch_1_title"></h3>
+                            <p class="text-sm" data-key="gov_branch_1_text"></p>
+                        </div>
+                        <div class="gov-branch p-4 rounded-lg">
+                            <h3 class="font-bold text-xl text-green-700" data-key="gov_branch_2_title"></h3>
+                            <p class="text-sm" data-key="gov_branch_2_text"></p>
+                        </div>
+                        <div class="gov-branch p-4 rounded-lg">
+                            <h3 class="font-bold text-xl text-purple-700" data-key="gov_branch_3_title"></h3>
+                            <p class="text-sm" data-key="gov_branch_3_text"></p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Resources & Security Section -->
+            <section id="resources" class="content-section">
+                <h2 class="text-3xl font-bold text-stone-800 mb-2" data-key="res_title"></h2>
+                <p class="text-lg text-stone-600 mb-6" data-key="res_subtitle"></p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="card p-6 rounded-lg">
+                        <h3 class="font-bold text-xl mb-2" data-key="res_1_title"></h3>
+                        <p data-key="res_1_text"></p>
+                    </div>
+                    <div class="card p-6 rounded-lg">
+                        <h3 class="font-bold text-xl mb-2" data-key="res_2_title"></h3>
+                        <p data-key="res_2_text"></p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Overall Vote Section -->
+            <section id="overall-vote" class="content-section">
+                <h2 class="text-3xl font-bold text-stone-800 mb-2" data-key="overall_vote_title"></h2>
+                <p class="text-lg text-stone-600 mb-6" data-key="overall_vote_subtitle"></p>
+
+                <div class="p-6 bg-white rounded-lg shadow-sm flex flex-col items-center gap-6">
+                    <p class="text-xl font-semibold text-stone-700" data-key="overall_vote_question"></p>
+                    <div class="flex flex-wrap justify-center gap-4">
+                        <button class="vote-button action-button bg-green-500 hover:bg-green-600" data-vote="yes">✅ <span data-key="vote_yes_label"></span></button>
+                        <button class="vote-button action-button bg-red-500 hover:bg-red-600" data-vote="no">❌ <span data-key="vote_no_label"></span></button>
+                        <button class="vote-button action-button bg-gray-400 hover:bg-gray-500" data-vote="null">⚪ <span data-key="vote_null_label"></span></button>
+                    </div>
+                    <div class="flex flex-wrap justify-center gap-4 text-lg text-stone-700">
+                        <p class="font-semibold" data-key="vote_yes_count_label"></p><span id="overall-vote-yes">0</span>
+                        <p class="font-semibold" data-key="vote_no_count_label"></p><span id="overall-vote-no">0</span>
+                        <p class="font-semibold" data-key="vote_null_count_label"></p><span id="overall-vote-null">0</span>
+                    </div>
+                    <p id="overall-vote-message" class="text-sm text-stone-600 mt-2"></p>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Demographic Modal -->
+    <div id="demographic-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 hidden items-center justify-center z-50 p-4">
+        <div class="modal-content-wrapper relative bg-white rounded-lg shadow-xl p-8 max-w-md w-full">
+            <!-- Watermark Logo -->
+            <img src="logo Tira.jpg" alt="Constitution Logo Watermark" class="watermark-logo">
+            
+            <h3 id="demographics-title" class="text-2xl font-bold text-stone-800 mb-4 relative z-10"></h3>
+            <p id="demographics-subtitle" class="text-stone-600 mb-6 relative z-10"></p>
+            <form id="demographic-form" class="space-y-5 relative z-10">
+                <!-- Age Question -->
+                <div>
+                    <label id="age-question" class="block text-stone-700 font-semibold mb-2"></label>
+                    <div class="flex gap-4">
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="age" value="yes" class="form-radio text-a88b68">
+                            <span id="age-yes-label" class="ml-2 text-stone-600"></span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="age" value="no" class="form-radio text-a88b68">
+                            <span id="age-no-label" class="ml-2 text-stone-600"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Gender Question -->
+                <div>
+                    <label id="gender-question" class="block text-stone-700 font-semibold mb-2"></label>
+                    <div class="flex gap-4">
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="gender" value="male" class="form-radio text-a88b68">
+                            <span id="gender-male-label" class="ml-2 text-stone-600"></span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="gender" value="female" class="form-radio text-a88b68">
+                            <span id="gender-female-label" class="ml-2 text-stone-600"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- City Selection -->
+                <div>
+                    <label id="city-question" class="block text-stone-700 font-semibold mb-2"></label>
+                    <select id="city-select" name="city" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-a88b68 focus:ring focus:ring-a88b68 focus:ring-opacity-50 p-2">
+                        <!-- Options will be dynamically loaded by JavaScript -->
+                    </select>
+                </div>
+
+                <button type="submit" id="submit-demographics" class="w-full bg-a88b68 text-white py-2 px-4 rounded-md hover:bg-stone-700 transition duration-200"></button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
